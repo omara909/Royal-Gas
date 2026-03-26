@@ -34,6 +34,8 @@
         .stat-card p { font-size: 32px; font-weight: 900; color: var(--r-blue); margin: 10px 0 0 0; }
         
         #addTechSection, #addTaskSection { display: none; } 
+        .bill-link { color: var(--r-blue); text-decoration: none; font-weight: bold; }
+        .bill-link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -64,6 +66,7 @@
                             <th>العميل</th>
                             <th>الفني</th>
                             <th>الحالة</th>
+                            <th>الفاتورة</th>
                             <th>التاريخ</th>
                         </tr>
                     </thead>
@@ -124,12 +127,10 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // --- مراقبة الفنيين (تحديث القائمة والجدول) ---
         function listenToTechs() {
             onSnapshot(collection(db, "technicians"), (snapshot) => {
                 const select = document.getElementById('techSelect');
                 const techTable = document.getElementById('techTableBody');
-                
                 select.innerHTML = '<option value="">-- اختر الفني --</option>';
                 techTable.innerHTML = '';
                 document.getElementById('totalTechs').innerText = snapshot.size;
@@ -137,14 +138,11 @@
                 snapshot.forEach((snapshotDoc) => {
                     const tech = snapshotDoc.data();
                     const id = snapshotDoc.id;
-
-                    // تحديث القائمة المنسدلة
                     const opt = document.createElement('option');
                     opt.value = tech.email;
                     opt.text = tech.name;
                     select.appendChild(opt);
 
-                    // تحديث الجدول
                     techTable.innerHTML += `
                         <tr>
                             <td>${tech.name}</td>
@@ -155,7 +153,6 @@
             });
         }
 
-        // --- مراقبة المهام (سجل البلاغات) ---
         function listenToTasks() {
             onSnapshot(collection(db, "tasks"), (snapshot) => {
                 const taskTable = document.getElementById('taskTableBody');
@@ -166,11 +163,17 @@
                     const t = doc.data();
                     if(t.status === "معلق") pending++;
                     
+                    // التحقق من وجود صورة فاتورة
+                    const billContent = t.billPhoto 
+                        ? `<a href="${t.billPhoto}" target="_blank" class="bill-link">👁️ عرض الفاتورة</a>` 
+                        : `<span style="color:#ccc">لا توجد</span>`;
+
                     taskTable.innerHTML += `
                         <tr>
                             <td>${t.clientName}</td>
                             <td>${t.techEmail}</td>
                             <td style="color: ${t.status === 'معلق' ? 'red' : 'green'}; font-weight:bold;">${t.status}</td>
+                            <td>${billContent}</td>
                             <td>${t.date}</td>
                         </tr>`;
                 });
@@ -178,25 +181,20 @@
             });
         }
 
-        // وظيفة الحذف (Global)
         window.deleteTech = async (id) => {
             if(confirm("هل أنت متأكد من حذف هذا الفني؟")) {
                 await deleteDoc(doc(db, "technicians", id));
             }
         };
 
-        // حفظ فني جديد
         document.getElementById('saveTechBtn').addEventListener('click', async () => {
             const name = document.getElementById('newTechName').value.trim();
             const email = document.getElementById('newTechEmail').value.toLowerCase().trim();
-
             if(!name || !email) return alert("يرجى ملء كافة الحقول");
-
+            
             const qEmail = query(collection(db, "technicians"), where("email", "==", email));
-            const qName = query(collection(db, "technicians"), where("name", "==", name));
-            const [eSnap, nSnap] = await Promise.all([getDocs(qEmail), getDocs(qName)]);
-
-            if (!eSnap.empty || !nSnap.empty) return alert("هذا الفني مسجل مسبقاً!");
+            const emailSnap = await getDocs(qEmail);
+            if (!emailSnap.empty) return alert("الإيميل مسجل مسبقاً!");
 
             await addDoc(collection(db, "technicians"), { name, email });
             alert("تم الحفظ ✅");
@@ -204,7 +202,6 @@
             document.getElementById('newTechEmail').value = "";
         });
 
-        // إرسال تكليف صيانة
         document.getElementById('sendBtn').addEventListener('click', async () => {
             const data = {
                 clientName: document.getElementById('clientName').value,
@@ -213,7 +210,8 @@
                 complaint: document.getElementById('complaint').value,
                 techEmail: document.getElementById('techSelect').value,
                 date: document.getElementById('taskDate').value,
-                status: "معلق"
+                status: "معلق",
+                billPhoto: null // قيمة افتراضية حتى يتم الرفع من الفني
             };
 
             if(!data.techEmail || !data.clientName) return alert("اكمل بيانات العميل واختار الفني");
@@ -230,7 +228,6 @@
             document.getElementById('addTechSection').style.display = section === 'addTech' ? 'block' : 'none';
         }
 
-        // بدء التشغيل
         listenToTechs();
         listenToTasks();
         document.getElementById('taskDate').valueAsDate = new Date();
