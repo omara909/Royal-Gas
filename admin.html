@@ -23,14 +23,13 @@
         .form-control { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
         
         .btn-submit { background: var(--r-blue); color: white; border: none; padding: 15px 30px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; margin-top: 10px; transition: 0.3s; }
-        .btn-submit.red { background: var(--r-red); }
         .btn-submit:hover { opacity: 0.9; transform: translateY(-2px); }
 
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
         .stat-card { background: white; padding: 25px; border-radius: 20px; border: 1px solid #eee; }
         .stat-card p { font-size: 32px; font-weight: 900; color: var(--r-blue); margin: 10px 0 0 0; }
         
-        #addTechSection { display: none; } /* مخفي افتراضياً */
+        #addTechSection { display: none; } 
     </style>
 </head>
 <body>
@@ -73,16 +72,16 @@
 
         <div id="addTechSection" class="action-section">
             <h2 style="color: var(--r-blue);">تسجيل فني جديد في النظام</h2>
-            <p style="font-size: 13px; color: #666;">* أضف بيانات الفني هنا ليظهر في قائمة التكليفات</p>
-            <div class="form-group"><label>اسم الفني</label><input type="text" id="newTechName" class="form-control" placeholder="مثلاً: أحمد محمد"></div>
-            <div class="form-group"><label>البريد الإلكتروني (المسجل في Firebase)</label><input type="email" id="newTechEmail" class="form-control" placeholder="tech@royalgas.com"></div>
-            <button class="btn-submit" id="saveTechBtn" style="background: #28a745;">حفظ الفني في القائمة 💾</button>
+            <p style="font-size: 13px; color: #666;">* لن يتم قبول الأسماء أو الإيميلات المتكررة</p>
+            <div class="form-group"><label>اسم الفني</label><input type="text" id="newTechName" class="form-control" placeholder="اسم الفني الثلاثي"></div>
+            <div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="newTechEmail" class="form-control" placeholder="tech@royalgas.com"></div>
+            <button class="btn-submit" id="saveTechBtn" style="background: #28a745;">تأكيد وحفظ الفني 💾</button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBZPQRSKGGINHkiReNu5Ly_gArUipQVYDs",
@@ -96,13 +95,12 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // --- 1. وظيفة جلب الفنيين وتحديث القائمة المنسدلة ---
+        // تحديث القائمة المنسدلة للفنيين
         function listenToTechs() {
             onSnapshot(collection(db, "technicians"), (snapshot) => {
                 const select = document.getElementById('techSelect');
                 select.innerHTML = '<option value="">-- اختر الفني المسئول --</option>';
                 document.getElementById('totalTechs').innerText = snapshot.size;
-                
                 snapshot.forEach((doc) => {
                     const tech = doc.data();
                     const opt = document.createElement('option');
@@ -114,23 +112,35 @@
         }
         listenToTechs();
 
-        // --- 2. وظيفة حفظ فني جديد ---
+        // حفظ فني جديد مع منع التكرار
         document.getElementById('saveTechBtn').addEventListener('click', async () => {
-            const name = document.getElementById('newTechName').value;
+            const name = document.getElementById('newTechName').value.trim();
             const email = document.getElementById('newTechEmail').value.toLowerCase().trim();
 
-            if(!name || !email) return alert("برجاء إدخال اسم وإيميل الفني");
+            if(!name || !email) return alert("يرجى ملء كافة الحقول");
 
             try {
-                await addDoc(collection(db, "technicians"), { name, email });
-                alert("تمت إضافة الفني بنجاح!");
+                const techRef = collection(db, "technicians");
+
+                // التحقق من تكرار الإيميل أو الاسم
+                const qEmail = query(techRef, where("email", "==", email));
+                const qName = query(techRef, where("name", "==", name));
+                
+                const [emailSnap, nameSnap] = await Promise.all([getDocs(qEmail), getDocs(qName)]);
+
+                if (!emailSnap.empty) return alert("هذا البريد الإلكتروني مسجل بالفعل!");
+                if (!nameSnap.empty) return alert("هذا الاسم مسجل لفني آخر بالفعل!");
+
+                await addDoc(techRef, { name, email });
+                alert("تم تسجيل الفني بنجاح ✅");
+                
                 document.getElementById('newTechName').value = "";
                 document.getElementById('newTechEmail').value = "";
                 showSection('stats');
-            } catch (e) { alert("خطأ في الحفظ"); }
+            } catch (e) { alert("حدث خطأ أثناء الاتصال"); }
         });
 
-        // --- 3. وظيفة إرسال تكليف صيانة ---
+        // إرسال تكليف صيانة
         document.getElementById('sendBtn').addEventListener('click', async () => {
             const data = {
                 clientName: document.getElementById('clientName').value,
@@ -142,7 +152,7 @@
                 status: "معلق"
             };
 
-            if(!data.techEmail) return alert("يجب اختيار فني مسئول");
+            if(!data.techEmail || !data.clientName) return alert("يرجى اختيار الفني وتحديد اسم العميل");
 
             try {
                 await addDoc(collection(db, "tasks"), data);
@@ -152,7 +162,6 @@
             } catch (e) { alert("خطأ في الإرسال"); }
         });
 
-        // التنقل بين الأقسام
         window.showSection = (section) => {
             document.getElementById('statsSection').style.display = section === 'stats' ? 'block' : 'none';
             document.getElementById('addTaskSection').style.display = section === 'addTask' ? 'block' : 'none';
