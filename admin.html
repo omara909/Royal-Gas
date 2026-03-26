@@ -22,14 +22,18 @@
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--r-blue); }
         .form-control { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
         
-        .btn-submit { background: var(--r-blue); color: white; border: none; padding: 15px 30px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; margin-top: 10px; transition: 0.3s; }
-        .btn-submit:hover { opacity: 0.9; transform: translateY(-2px); }
+        .btn-submit { background: var(--r-blue); color: white; border: none; padding: 12px 25px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; margin-top: 10px; transition: 0.3s; }
+        .btn-delete { background: var(--r-red); color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
+        th, td { padding: 12px; text-align: right; border-bottom: 1px solid #eee; font-size: 14px; }
+        th { background: #f4f7f9; color: var(--r-blue); }
 
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
         .stat-card { background: white; padding: 25px; border-radius: 20px; border: 1px solid #eee; }
         .stat-card p { font-size: 32px; font-weight: 900; color: var(--r-blue); margin: 10px 0 0 0; }
         
-        #addTechSection { display: none; } 
+        #addTechSection, #addTaskSection { display: none; } 
     </style>
 </head>
 <body>
@@ -37,7 +41,7 @@
     <div class="sidebar">
         <h2>ROYAL GAS</h2>
         <nav>
-            <a onclick="showSection('stats')" class="nav-link">📊 الإحصائيات</a>
+            <a onclick="showSection('stats')" class="nav-link">📊 الإحصائيات والمهام</a>
             <a onclick="showSection('addTask')" class="nav-link">📝 إرسال طلب صيانة</a>
             <a onclick="showSection('addTech')" class="nav-link">👷 إدارة الفنيين</a>
             <a href="index.html" class="nav-link" style="margin-top: 50px; background: var(--r-red);">🚪 تسجيل خروج</a>
@@ -49,12 +53,26 @@
             <h1 style="color: var(--r-blue); font-weight: 900;">إحصائيات النظام</h1>
             <div class="stats-grid">
                 <div class="stat-card"><h3>إجمالي الفنيين</h3><p id="totalTechs">0</p></div>
-                <div class="stat-card"><h3>عمليات اليوم</h3><p>0</p></div>
                 <div class="stat-card"><h3>أعطال معلقة</h3><p id="pendingCount" style="color: var(--r-red);">0</p></div>
+            </div>
+
+            <div class="action-section">
+                <h3 style="color: var(--r-blue);">📋 سجل البلاغات المرسلة</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>العميل</th>
+                            <th>الفني</th>
+                            <th>الحالة</th>
+                            <th>التاريخ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="taskTableBody"></tbody>
+                </table>
             </div>
         </div>
 
-        <div id="addTaskSection" class="action-section" style="display:none;">
+        <div id="addTaskSection" class="action-section">
             <h2 style="color: var(--r-blue);">إدخال بيانات عميل صيانة جديد</h2>
             <div class="form-group"><label>اسم العميل</label><input type="text" id="clientName" class="form-control"></div>
             <div class="form-group"><label>عنوان العميل</label><input type="text" id="address" class="form-control"></div>
@@ -62,26 +80,37 @@
             <div class="form-group"><label>شكوى العميل</label><textarea id="complaint" class="form-control" rows="2"></textarea></div>
             <div class="form-group">
                 <label>تحديد الفني المسئول</label>
-                <select id="techSelect" class="form-control">
-                    <option value="">جاري تحميل الفنيين...</option>
-                </select>
+                <select id="techSelect" class="form-control"><option value="">جاري التحميل...</option></select>
             </div>
             <div class="form-group"><label>التاريخ</label><input type="date" id="taskDate" class="form-control"></div>
             <button class="btn-submit" id="sendBtn">إرسال التكليف للفني ✅</button>
         </div>
 
         <div id="addTechSection" class="action-section">
-            <h2 style="color: var(--r-blue);">تسجيل فني جديد في النظام</h2>
-            <p style="font-size: 13px; color: #666;">* لن يتم قبول الأسماء أو الإيميلات المتكررة</p>
-            <div class="form-group"><label>اسم الفني</label><input type="text" id="newTechName" class="form-control" placeholder="اسم الفني الثلاثي"></div>
-            <div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="newTechEmail" class="form-control" placeholder="tech@royalgas.com"></div>
-            <button class="btn-submit" id="saveTechBtn" style="background: #28a745;">تأكيد وحفظ الفني 💾</button>
+            <h2 style="color: var(--r-blue);">إدارة الفنيين</h2>
+            <div style="background: #f9f9f9; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <div class="form-group"><label>اسم الفني الجديد</label><input type="text" id="newTechName" class="form-control"></div>
+                <div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="newTechEmail" class="form-control"></div>
+                <button class="btn-submit" id="saveTechBtn" style="background: #28a745;">حفظ الفني الجديد 💾</button>
+            </div>
+
+            <h3>الفنيين المسجلين حالياً</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>الإيميل</th>
+                        <th>إجراء</th>
+                    </tr>
+                </thead>
+                <tbody id="techTableBody"></tbody>
+            </table>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBZPQRSKGGINHkiReNu5Ly_gArUipQVYDs",
@@ -95,49 +124,84 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // تحديث القائمة المنسدلة للفنيين
+        // --- مراقبة الفنيين (تحديث القائمة والجدول) ---
         function listenToTechs() {
             onSnapshot(collection(db, "technicians"), (snapshot) => {
                 const select = document.getElementById('techSelect');
-                select.innerHTML = '<option value="">-- اختر الفني المسئول --</option>';
+                const techTable = document.getElementById('techTableBody');
+                
+                select.innerHTML = '<option value="">-- اختر الفني --</option>';
+                techTable.innerHTML = '';
                 document.getElementById('totalTechs').innerText = snapshot.size;
-                snapshot.forEach((doc) => {
-                    const tech = doc.data();
+
+                snapshot.forEach((snapshotDoc) => {
+                    const tech = snapshotDoc.data();
+                    const id = snapshotDoc.id;
+
+                    // تحديث القائمة المنسدلة
                     const opt = document.createElement('option');
                     opt.value = tech.email;
                     opt.text = tech.name;
                     select.appendChild(opt);
+
+                    // تحديث الجدول
+                    techTable.innerHTML += `
+                        <tr>
+                            <td>${tech.name}</td>
+                            <td>${tech.email}</td>
+                            <td><button class="btn-delete" onclick="window.deleteTech('${id}')">حذف</button></td>
+                        </tr>`;
                 });
             });
         }
-        listenToTechs();
 
-        // حفظ فني جديد مع منع التكرار
+        // --- مراقبة المهام (سجل البلاغات) ---
+        function listenToTasks() {
+            onSnapshot(collection(db, "tasks"), (snapshot) => {
+                const taskTable = document.getElementById('taskTableBody');
+                let pending = 0;
+                taskTable.innerHTML = '';
+
+                snapshot.forEach((doc) => {
+                    const t = doc.data();
+                    if(t.status === "معلق") pending++;
+                    
+                    taskTable.innerHTML += `
+                        <tr>
+                            <td>${t.clientName}</td>
+                            <td>${t.techEmail}</td>
+                            <td style="color: ${t.status === 'معلق' ? 'red' : 'green'}; font-weight:bold;">${t.status}</td>
+                            <td>${t.date}</td>
+                        </tr>`;
+                });
+                document.getElementById('pendingCount').innerText = pending;
+            });
+        }
+
+        // وظيفة الحذف (Global)
+        window.deleteTech = async (id) => {
+            if(confirm("هل أنت متأكد من حذف هذا الفني؟")) {
+                await deleteDoc(doc(db, "technicians", id));
+            }
+        };
+
+        // حفظ فني جديد
         document.getElementById('saveTechBtn').addEventListener('click', async () => {
             const name = document.getElementById('newTechName').value.trim();
             const email = document.getElementById('newTechEmail').value.toLowerCase().trim();
 
             if(!name || !email) return alert("يرجى ملء كافة الحقول");
 
-            try {
-                const techRef = collection(db, "technicians");
+            const qEmail = query(collection(db, "technicians"), where("email", "==", email));
+            const qName = query(collection(db, "technicians"), where("name", "==", name));
+            const [eSnap, nSnap] = await Promise.all([getDocs(qEmail), getDocs(qName)]);
 
-                // التحقق من تكرار الإيميل أو الاسم
-                const qEmail = query(techRef, where("email", "==", email));
-                const qName = query(techRef, where("name", "==", name));
-                
-                const [emailSnap, nameSnap] = await Promise.all([getDocs(qEmail), getDocs(qName)]);
+            if (!eSnap.empty || !nSnap.empty) return alert("هذا الفني مسجل مسبقاً!");
 
-                if (!emailSnap.empty) return alert("هذا البريد الإلكتروني مسجل بالفعل!");
-                if (!nameSnap.empty) return alert("هذا الاسم مسجل لفني آخر بالفعل!");
-
-                await addDoc(techRef, { name, email });
-                alert("تم تسجيل الفني بنجاح ✅");
-                
-                document.getElementById('newTechName').value = "";
-                document.getElementById('newTechEmail').value = "";
-                showSection('stats');
-            } catch (e) { alert("حدث خطأ أثناء الاتصال"); }
+            await addDoc(collection(db, "technicians"), { name, email });
+            alert("تم الحفظ ✅");
+            document.getElementById('newTechName').value = "";
+            document.getElementById('newTechEmail').value = "";
         });
 
         // إرسال تكليف صيانة
@@ -152,14 +216,12 @@
                 status: "معلق"
             };
 
-            if(!data.techEmail || !data.clientName) return alert("يرجى اختيار الفني وتحديد اسم العميل");
+            if(!data.techEmail || !data.clientName) return alert("اكمل بيانات العميل واختار الفني");
 
-            try {
-                await addDoc(collection(db, "tasks"), data);
-                alert("تم إرسال التكليف بنجاح");
-                document.querySelectorAll('.form-control').forEach(i => i.value = "");
-                document.getElementById('taskDate').valueAsDate = new Date();
-            } catch (e) { alert("خطأ في الإرسال"); }
+            await addDoc(collection(db, "tasks"), data);
+            alert("تم إرسال التكليف بنجاح");
+            document.querySelectorAll('#addTaskSection .form-control').forEach(i => i.value = "");
+            document.getElementById('taskDate').valueAsDate = new Date();
         });
 
         window.showSection = (section) => {
@@ -167,6 +229,10 @@
             document.getElementById('addTaskSection').style.display = section === 'addTask' ? 'block' : 'none';
             document.getElementById('addTechSection').style.display = section === 'addTech' ? 'block' : 'none';
         }
+
+        // بدء التشغيل
+        listenToTechs();
+        listenToTasks();
         document.getElementById('taskDate').valueAsDate = new Date();
     </script>
 </body>
