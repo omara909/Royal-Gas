@@ -10,7 +10,7 @@
         * { box-sizing: border-box; }
         body { margin: 0; background: #fff; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
 
-        /* الافتتاحية الأصلية المعتمدة */
+        /* الافتتاحية */
         #splash { position: fixed; inset: 0; background: #fff; display: flex; justify-content: center; align-items: center; z-index: 10000; transition: 0.8s; }
         .logo-frame { display: flex; flex-direction: column; align-items: center; width: 450px; text-align: center; }
         .top-part { transform: translateY(-500px); opacity: 0; animation: dropIn 1.2s forwards; }
@@ -26,7 +26,7 @@
         @keyframes slideRight { to { transform: translateX(0); opacity: 1; } }
         @keyframes zoomCenter { to { transform: scale(1); opacity: 1; } }
 
-        /* واجهة الدخول المعتمدة */
+        /* واجهة الدخول */
         #authScreen { display: none; width: 100%; height: 100vh; background: #ffffff; flex-direction: column; justify-content: center; align-items: center; opacity: 0; transition: 1s; }
         .login-card { background: #ffffff; padding: 40px; border-radius: 25px; width: 90%; max-width: 400px; text-align: center; border: 2px solid var(--r-lightblue); transition: 0.4s ease; display: flex; flex-direction: column; align-items: center; }
         .login-card:hover { transform: translateY(-12px); box-shadow: 0 30px 60px rgba(11, 74, 153, 0.15); border-color: var(--r-blue); }
@@ -92,23 +92,31 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // وظيفة تسجيل الدخول
+        // وظيفة تسجيل الدخول المحدثة للتوجيه
         document.getElementById('loginBtn').addEventListener('click', async () => {
-            const email = document.getElementById('email').value;
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
 
             if(!email || !password) return alert("يرجى إدخال البيانات");
 
             try {
-                await signInWithEmailAndPassword(auth, email, password);
-                alert("تم تسجيل الدخول بنجاح!");
-                // هنا سنوجه الفني لصفحة لوحة التحكم لاحقاً
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                
+                // --- التعديل الجديد هنا ---
+                if (email === "admin@royalgas.com") {
+                    alert("مرحباً أيها المدير");
+                    window.location.href = "admin.html"; // هيفتح ملف الـ admin اللي رفعته
+                } else {
+                    alert("تم تسجيل الدخول بنجاح!");
+                    window.location.href = "technician.html"; // هيفتح ملف الفني (اللي لسه هنعمله)
+                }
+                // ------------------------
+
             } catch (error) {
-                alert("خطأ: تأكد من الإيميل والباسورد");
+                alert("خطأ: تأكد من الإيميل والباسورد أو صلاحية المستخدم");
             }
         });
 
-        // تشغيل الافتتاحية
         window.onload = () => {
             setTimeout(() => {
                 document.getElementById('splash').style.opacity = '0';
@@ -118,7 +126,7 @@
                     authDiv.style.display = 'flex';
                     setTimeout(() => authDiv.style.opacity = '1', 50);
                 }, 800);
-            }, 5000);
+            }, 3000); // قللت وقت الانتظار لـ 3 ثواني عشان التجربة تكون أسرع
         };
     </script>
 </body>
