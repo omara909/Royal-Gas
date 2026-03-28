@@ -39,6 +39,7 @@
         .badge-pending { background: #fff5f5; color: var(--r-red); }
         .badge-done { background: #f0fff4; color: var(--r-green); }
         
+        /* جعل الأقسام مخفية افتراضياً ماعدا التقارير */
         #addTechSection, #addTaskSection { display: none; }
         .map-link { color: #007bff; text-decoration: none; font-weight: bold; font-size: 12px; }
     </style>
@@ -121,7 +122,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // التحديث للبيانات الجديدة
         const firebaseConfig = {
             apiKey: "AIzaSyDFpWeQWHeLnNIC-81UNEEVz_LCa8NMWIc",
             authDomain: "royal-gas.firebaseapp.com",
@@ -135,94 +135,102 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // --- نظام مراقبة المهام والتقارير ---
-        function listenToTasks() {
-            onSnapshot(collection(db, "tasks"), (snapshot) => {
-                const taskTable = document.getElementById('taskTableBody');
-                let pending = 0, completed = 0;
-                let techStats = {};
-                taskTable.innerHTML = '';
+        // --- وظائف عامة (عشان السايد بار يشتغل) ---
+        window.showSection = (section) => {
+            document.getElementById('statsSection').style.display = section === 'stats' ? 'block' : 'none';
+            document.getElementById('addTaskSection').style.display = section === 'addTask' ? 'block' : 'none';
+            document.getElementById('addTechSection').style.display = section === 'addTech' ? 'block' : 'none';
+        };
 
-                snapshot.forEach((docSnap) => {
-                    const t = docSnap.data();
-                    const id = docSnap.id;
-                    
-                    if(t.status === "معلق") pending++;
-                    else {
-                        completed++;
-                        techStats[t.techEmail] = (techStats[t.techEmail] || 0) + 1;
-                    }
+        window.deleteTask = async (id) => { 
+            if(confirm("حذف هذا البلاغ نهائياً؟")) await deleteDoc(doc(db, "tasks", id)); 
+        };
 
-                    // تصحيح رابط الخريطة ليعمل مع جوجل مابس مباشرة
-                    const mapBtn = t.location 
-                        ? `<a href="https://www.google.com/maps?q=${t.location.lat},${t.location.lng}" target="_blank" class="map-link">📍 خريطة</a>` 
-                        : '<span style="color:#ccc">N/A</span>';
+        window.deleteTech = async (id) => { 
+            if(confirm("حذف الفني؟")) await deleteDoc(doc(db, "technicians", id)); 
+        };
 
-                    const billContent = t.billPhoto 
-                        ? `<a href="${t.billPhoto}" target="_blank" style="color:var(--r-blue); font-weight:bold; text-decoration:none;">🖼️ عرض</a>` 
-                        : `<span style="color:#ccc">معلق</span>`;
+        // --- مراقبة المهام ---
+        onSnapshot(collection(db, "tasks"), (snapshot) => {
+            const taskTable = document.getElementById('taskTableBody');
+            let pending = 0, completed = 0;
+            let techStats = {};
+            taskTable.innerHTML = '';
 
-                    taskTable.innerHTML += `
-                        <tr>
-                            <td><b>${t.clientName}</b></td>
-                            <td>${t.techEmail ? t.techEmail.split('@')[0] : 'غير محدد'}</td>
-                            <td><span class="badge ${t.status === 'معلق' ? 'badge-pending' : 'badge-done'}">${t.status}</span></td>
-                            <td>${mapBtn}</td>
-                            <td>${billContent}</td>
-                            <td>${t.finishTime || t.date}</td>
-                            <td>
-                                <button class="btn-delete" onclick="window.deleteTask('${id}')">حذف</button>
-                            </td>
-                        </tr>`;
-                });
-
-                document.getElementById('pendingCount').innerText = pending;
-                document.getElementById('completedCount').innerText = completed;
+            snapshot.forEach((docSnap) => {
+                const t = docSnap.data();
+                const id = docSnap.id;
                 
-                const top = Object.entries(techStats).sort((a,b) => b[1] - a[1])[0];
-                document.getElementById('topTech').innerText = top ? `${top[0].split('@')[0]} (${top[1]})` : "-";
+                if(t.status === "معلق") pending++;
+                else {
+                    completed++;
+                    techStats[t.techEmail] = (techStats[t.techEmail] || 0) + 1;
+                }
+
+                const mapBtn = t.location 
+                    ? `<a href="https://www.google.com/maps?q=${t.location.lat},${t.location.lng}" target="_blank" class="map-link">📍 خريطة</a>` 
+                    : '<span style="color:#ccc">N/A</span>';
+
+                const billContent = t.billPhoto 
+                    ? `<a href="${t.billPhoto}" target="_blank" style="color:var(--r-blue); font-weight:bold; text-decoration:none;">🖼️ عرض</a>` 
+                    : `<span style="color:#ccc">معلق</span>`;
+
+                taskTable.innerHTML += `
+                    <tr>
+                        <td><b>${t.clientName}</b></td>
+                        <td>${t.techEmail ? t.techEmail.split('@')[0] : 'غير محدد'}</td>
+                        <td><span class="badge ${t.status === 'معلق' ? 'badge-pending' : 'badge-done'}">${t.status}</span></td>
+                        <td>${mapBtn}</td>
+                        <td>${billContent}</td>
+                        <td>${t.finishTime || t.date}</td>
+                        <td><button class="btn-delete" onclick="deleteTask('${id}')">حذف</button></td>
+                    </tr>`;
             });
-        }
 
-        // --- إدارة الفنيين ---
-        function listenToTechs() {
-            onSnapshot(collection(db, "technicians"), (snapshot) => {
-                const select = document.getElementById('techSelect');
-                const techTable = document.getElementById('techTableBody');
-                select.innerHTML = '<option value="">-- اختر الفني --</option>';
-                techTable.innerHTML = '';
-                document.getElementById('totalTechs').innerText = snapshot.size;
+            document.getElementById('pendingCount').innerText = pending;
+            document.getElementById('completedCount').innerText = completed;
+            const top = Object.entries(techStats).sort((a,b) => b[1] - a[1])[0];
+            document.getElementById('topTech').innerText = top ? `${top[0].split('@')[0]} (${top[1]})` : "-";
+        });
 
-                snapshot.forEach((snapshotDoc) => {
-                    const tech = snapshotDoc.data();
-                    const id = snapshotDoc.id;
-                    const opt = document.createElement('option');
-                    opt.value = tech.email;
-                    opt.text = tech.name;
-                    select.appendChild(opt);
+        // --- مراقبة الفنيين ---
+        onSnapshot(collection(db, "technicians"), (snapshot) => {
+            const select = document.getElementById('techSelect');
+            const techTable = document.getElementById('techTableBody');
+            select.innerHTML = '<option value="">-- اختر الفني --</option>';
+            techTable.innerHTML = '';
+            document.getElementById('totalTechs').innerText = snapshot.size;
 
-                    techTable.innerHTML += `
-                        <tr>
-                            <td>${tech.name}</td>
-                            <td>${tech.email}</td>
-                            <td><button class="btn-delete" onclick="window.deleteTech('${id}')">حذف</button></td>
-                        </tr>`;
-                });
+            snapshot.forEach((snapshotDoc) => {
+                const tech = snapshotDoc.data();
+                const id = snapshotDoc.id;
+                
+                const opt = document.createElement('option');
+                opt.value = tech.email;
+                opt.text = tech.name;
+                select.appendChild(opt);
+
+                techTable.innerHTML += `
+                    <tr>
+                        <td>${tech.name}</td>
+                        <td>${tech.email}</td>
+                        <td><button class="btn-delete" onclick="deleteTech('${id}')">حذف</button></td>
+                    </tr>`;
             });
-        }
+        });
 
-        window.deleteTask = async (id) => { if(confirm("حذف هذا البلاغ نهائياً؟")) await deleteDoc(doc(db, "tasks", id)); };
-        window.deleteTech = async (id) => { if(confirm("حذف الفني؟")) await deleteDoc(doc(db, "technicians", id)); };
-
+        // --- إضافة فني ---
         document.getElementById('saveTechBtn').addEventListener('click', async () => {
             const name = document.getElementById('newTechName').value.trim();
             const email = document.getElementById('newTechEmail').value.toLowerCase().trim();
             if(!name || !email) return alert("اكمل البيانات");
             await addDoc(collection(db, "technicians"), { name, email });
-            alert("تمت الإضافة");
-            document.getElementById('newTechName').value = ""; document.getElementById('newTechEmail').value = "";
+            alert("تمت الإضافة بنجاح");
+            document.getElementById('newTechName').value = ""; 
+            document.getElementById('newTechEmail').value = "";
         });
 
+        // --- إرسال مهمة ---
         document.getElementById('sendBtn').addEventListener('click', async () => {
             const data = {
                 clientName: document.getElementById('clientName').value,
@@ -239,16 +247,9 @@
             await addDoc(collection(db, "tasks"), data);
             alert("تم الإرسال للفني ✅");
             document.querySelectorAll('#addTaskSection .form-control').forEach(i => i.value = "");
+            document.getElementById('taskDate').valueAsDate = new Date();
         });
 
-        window.showSection = (section) => {
-            document.getElementById('statsSection').style.display = section === 'stats' ? 'block' : 'none';
-            document.getElementById('addTaskSection').style.display = section === 'addTask' ? 'block' : 'none';
-            document.getElementById('addTechSection').style.display = section === 'addTech' ? 'block' : 'none';
-        }
-
-        listenToTechs();
-        listenToTasks();
         document.getElementById('taskDate').valueAsDate = new Date();
     </script>
 </body>
