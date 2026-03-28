@@ -119,15 +119,17 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+        // التحديث للبيانات الجديدة
         const firebaseConfig = {
-            apiKey: "AIzaSyBZPQRSKGGINHkiReNu5Ly_gArUipQVYDs",
-            authDomain: "royal-gas-system.firebaseapp.com",
-            projectId: "royal-gas-system",
-            storageBucket: "royal-gas-system.firebasestorage.app",
-            messagingSenderId: "115245633400",
-            appId: "1:115245633400:web:747a95eb2774360dd4828d"
+            apiKey: "AIzaSyDFpWeQWHeLnNIC-81UNEEVz_LCa8NMWIc",
+            authDomain: "royal-gas.firebaseapp.com",
+            projectId: "royal-gas",
+            storageBucket: "royal-gas.firebasestorage.app",
+            messagingSenderId: "1091464548493",
+            appId: "1:1091464548493:web:c2b24978817839da7cd2c4",
+            measurementId: "G-PYGR6WDD95"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -148,10 +150,10 @@
                     if(t.status === "معلق") pending++;
                     else {
                         completed++;
-                        // تحليل أداء الفنيين
                         techStats[t.techEmail] = (techStats[t.techEmail] || 0) + 1;
                     }
 
+                    // تصحيح رابط الخريطة ليعمل مع جوجل مابس مباشرة
                     const mapBtn = t.location 
                         ? `<a href="https://www.google.com/maps?q=${t.location.lat},${t.location.lng}" target="_blank" class="map-link">📍 خريطة</a>` 
                         : '<span style="color:#ccc">N/A</span>';
@@ -163,7 +165,7 @@
                     taskTable.innerHTML += `
                         <tr>
                             <td><b>${t.clientName}</b></td>
-                            <td>${t.techEmail.split('@')[0]}</td>
+                            <td>${t.techEmail ? t.techEmail.split('@')[0] : 'غير محدد'}</td>
                             <td><span class="badge ${t.status === 'معلق' ? 'badge-pending' : 'badge-done'}">${t.status}</span></td>
                             <td>${mapBtn}</td>
                             <td>${billContent}</td>
@@ -177,13 +179,12 @@
                 document.getElementById('pendingCount').innerText = pending;
                 document.getElementById('completedCount').innerText = completed;
                 
-                // تحديد أفضل فني
                 const top = Object.entries(techStats).sort((a,b) => b[1] - a[1])[0];
                 document.getElementById('topTech').innerText = top ? `${top[0].split('@')[0]} (${top[1]})` : "-";
             });
         }
 
-        // --- إدارة الفنيين والوظائف الأخرى ---
+        // --- إدارة الفنيين ---
         function listenToTechs() {
             onSnapshot(collection(db, "technicians"), (snapshot) => {
                 const select = document.getElementById('techSelect');
