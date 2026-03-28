@@ -27,7 +27,7 @@
         @keyframes zoomCenter { to { transform: scale(1); opacity: 1; } }
 
         /* واجهة الدخول */
-        #authScreen { display: none; width: 100%; height: 100vh; background: #ffffff; flex-direction: column; justify-content: center; align-items: center; opacity: 0; transition: 1s; }
+        #authScreen { display: none; width: 100%; height: 100vh; background: #ffffff; flex-direction: column; justify-content: center; align-items: center; opacity: 0; transition: 0.5s; }
         .login-card { background: #ffffff; padding: 40px; border-radius: 25px; width: 90%; max-width: 400px; text-align: center; border: 2px solid var(--r-lightblue); transition: 0.4s ease; display: flex; flex-direction: column; align-items: center; }
         .login-card:hover { transform: translateY(-12px); box-shadow: 0 30px 60px rgba(11, 74, 153, 0.15); border-color: var(--r-blue); }
         .card-logo-wrapper { transform: scale(0.4); margin: -60px 0 -20px 0; display: flex; justify-content: center; width: 100%; }
@@ -40,17 +40,16 @@
         .login-btn:hover { background: #083a7a; }
 
         /* نافذة الترحيب بالمدير */
-        #welcomeOverlay { display: none; position: fixed; inset: 0; background: rgba(11, 74, 153, 0.95); z-index: 10001; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; animation: fadeIn 0.5s; }
-        .welcome-content h2 { font-size: 40px; margin-bottom: 10px; }
-        .welcome-content p { font-size: 20px; opacity: 0.9; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        #welcomeOverlay { display: none; position: fixed; inset: 0; background: var(--r-blue); z-index: 10001; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; opacity: 0; transition: 0.5s; }
+        .welcome-content h2 { font-size: 45px; font-weight: 900; margin: 20px 0 10px; }
+        .welcome-content p { font-size: 22px; opacity: 0.9; font-weight: 600; }
     </style>
 </head>
 <body>
 
     <div id="welcomeOverlay">
         <div class="welcome-content">
-            <div class="crown-icon" style="margin: 0 auto 20px; transform: scale(1.5);"></div>
+            <div class="crown-icon" style="margin: 0 auto; transform: scale(2); background: white;"></div>
             <h2>أهلاً بك يا مدير</h2>
             <p>جارٍ تحضير لوحة التحكم.. اتفضل</p>
         </div>
@@ -66,7 +65,7 @@
     </div>
 
     <div id="authScreen">
-        <div class="login-card">
+        <div class="login-card" id="loginCard">
             <div class="card-logo-wrapper">
                 <div class="logo-frame">
                     <div class="crown-icon"></div>
@@ -112,32 +111,39 @@
 
             if(!email || !password) return alert("يرجى إدخال كافة البيانات");
 
-            // تغيير نص الزرار ليعطي انطباع بالتحميل
             const btn = document.getElementById('loginBtn');
             btn.innerText = "جاري التحقق...";
-            btn.style.opacity = "0.7";
+            btn.disabled = true;
 
             try {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 
                 if (email === "admin@royalgas.com") {
-                    // إظهار رسالة الترحيب الخاصة بالمدير
-                    const welcome = document.getElementById('welcomeOverlay');
-                    welcome.style.display = 'flex';
+                    // 1. إخفاء واجهة الدخول تماماً
+                    document.getElementById('authScreen').style.opacity = '0';
                     
-                    // تأخير بسيط لكي يرى المدير الرسالة قبل الانتقال
                     setTimeout(() => {
-                        window.location.href = "admin.html";
-                    }, 2000);
+                        document.getElementById('authScreen').style.display = 'none';
+                        
+                        // 2. إظهار شاشة الترحيب
+                        const welcome = document.getElementById('welcomeOverlay');
+                        welcome.style.display = 'flex';
+                        setTimeout(() => welcome.style.opacity = '1', 50);
+                        
+                        // 3. الانتظار ثانيتين للمدير ثم الانتقال
+                        setTimeout(() => {
+                            window.location.href = "admin.html";
+                        }, 2500);
+                    }, 500);
+
                 } else {
-                    // دخول الفني مباشرة
                     window.location.href = "technician.html";
                 }
 
             } catch (error) {
                 console.error(error);
                 btn.innerText = "دخول النظام";
-                btn.style.opacity = "1";
+                btn.disabled = false;
                 alert("فشل الدخول: تأكد من الإيميل والباسورد");
             }
         });
