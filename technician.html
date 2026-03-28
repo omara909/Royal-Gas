@@ -7,6 +7,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap');
         :root { --main: #0b4a99; --accent: #ce2029; --success: #28a745; --bg: #f4f7f6; }
+        * { box-sizing: border-box; }
         body { font-family: 'Cairo', sans-serif; background: var(--bg); margin: 0; padding: 15px; padding-bottom: 50px; }
         
         .header { background: var(--main); color: white; padding: 25px 20px; border-radius: 0 0 25px 25px; margin: -15px -15px 20px -15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -33,11 +34,13 @@
         .upload-input { display: none; }
         .loader { display: none; font-size: 14px; color: var(--main); text-align: center; font-weight: bold; margin: 10px 0; }
         .gps-notice { font-size: 11px; color: #888; text-align: center; margin-top: 5px; }
+        .logout-btn { background: none; border: 1px solid white; color: white; padding: 5px 10px; border-radius: 8px; font-size: 12px; float: left; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div class="header">
+        <button class="logout-btn" id="logoutBtn">خروج</button>
         <h2>📋 لوحة تحكم الفني</h2>
         <p id="techEmail" style="font-size: 13px; opacity: 0.8; margin-top: 8px;"></p>
     </div>
@@ -59,16 +62,18 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+    // بيانات المشروع الجديد
     const firebaseConfig = {
-        apiKey: "AIzaSyBZPQRSKGGINHkiReNu5Ly_gArUipQVYDs",
-        authDomain: "royal-gas-system.firebaseapp.com",
-        projectId: "royal-gas-system",
-        storageBucket: "royal-gas-system.firebasestorage.app",
-        messagingSenderId: "115245633400",
-        appId: "1:115245633400:web:747a95eb2774360dd4828d"
+        apiKey: "AIzaSyDFpWeQWHeLnNIC-81UNEEVz_LCa8NMWIc",
+        authDomain: "royal-gas.firebaseapp.com",
+        projectId: "royal-gas",
+        storageBucket: "royal-gas.firebasestorage.app",
+        messagingSenderId: "1091464548493",
+        appId: "1:1091464548493:web:c2b24978817839da7cd2c4",
+        measurementId: "G-PYGR6WDD95"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -76,6 +81,7 @@
     const db = getFirestore(app);
     const IMGBB_API_KEY = "621693c6848341977008ebc613225c19";
 
+    // التحقق من حالة الدخول وجلب المهام
     onAuthStateChanged(auth, (user) => {
         if (user) {
             document.getElementById('techEmail').innerText = "فني: " + user.email;
@@ -134,6 +140,12 @@
         }
     });
 
+    // تسجيل الخروج
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        signOut(auth).then(() => window.location.href = "index.html");
+    });
+
+    // معالجة رفع الفاتورة
     window.handleUpload = async (taskId) => {
         const fileInput = document.getElementById(`file_${taskId}`);
         const loader = document.getElementById(`loader_${taskId}`);
@@ -168,7 +180,7 @@
         }
     };
 
-    // وظيفة الإنهاء مع التوثيق الجغرافي
+    // إغلاق المهمة مع توثيق GPS
     window.finishTask = async (taskId) => {
         const doneBtn = document.getElementById(`btnDone_${taskId}`);
         const imageUrl = doneBtn.getAttribute('data-url');
@@ -176,7 +188,6 @@
 
         gpsStatus.innerText = "📍 جاري تحديد موقعك...";
 
-        // طلب إذن الموقع الجغرافي
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(async (position) => {
                 try {
