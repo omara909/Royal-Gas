@@ -79,41 +79,39 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+        // الـ Config الجديد الخاص بالمشروع الحالي
         const firebaseConfig = {
-            apiKey: "AIzaSyBZPQRSKGGINHkiReNu5Ly_gArUipQVYDs",
-            authDomain: "royal-gas-system.firebaseapp.com",
-            projectId: "royal-gas-system",
-            storageBucket: "royal-gas-system.firebasestorage.app",
-            messagingSenderId: "115245633400",
-            appId: "1:115245633400:web:747a95eb2774360dd4828d",
-            measurementId: "G-L5H5KH1Z6Z"
+            apiKey: "AIzaSyDFpWeQWHeLnNIC-81UNEEVz_LCa8NMWIc",
+            authDomain: "royal-gas.firebaseapp.com",
+            projectId: "royal-gas",
+            storageBucket: "royal-gas.firebasestorage.app",
+            messagingSenderId: "1091464548493",
+            appId: "1:1091464548493:web:c2b24978817839da7cd2c4",
+            measurementId: "G-PYGR6WDD95"
         };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // وظيفة تسجيل الدخول المحدثة للتوجيه
         document.getElementById('loginBtn').addEventListener('click', async () => {
-            const email = document.getElementById('email').value.trim();
+            const email = document.getElementById('email').value.trim().toLowerCase();
             const password = document.getElementById('password').value;
 
-            if(!email || !password) return alert("يرجى إدخال البيانات");
+            if(!email || !password) return alert("يرجى إدخال كافة البيانات");
 
             try {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 
-                // --- التعديل الجديد هنا ---
+                // توجيه المدير أو الفني
                 if (email === "admin@royalgas.com") {
-                    alert("مرحباً أيها المدير");
-                    window.location.href = "admin.html"; // هيفتح ملف الـ admin اللي رفعته
+                    window.location.href = "admin.html";
                 } else {
-                    alert("تم تسجيل الدخول بنجاح!");
-                    window.location.href = "technician.html"; // هيفتح ملف الفني (اللي لسه هنعمله)
+                    window.location.href = "technician.html";
                 }
-                // ------------------------
 
             } catch (error) {
-                alert("خطأ: تأكد من الإيميل والباسورد أو صلاحية المستخدم");
+                console.error(error);
+                alert("فشل الدخول: تأكد من الإيميل والباسورد أو تأكد من إضافة المستخدم في الـ Auth");
             }
         });
 
@@ -126,7 +124,7 @@
                     authDiv.style.display = 'flex';
                     setTimeout(() => authDiv.style.opacity = '1', 50);
                 }, 800);
-            }, 3000); // قللت وقت الانتظار لـ 3 ثواني عشان التجربة تكون أسرع
+            }, 2500); // 2.5 ثانية وقت كافي للافتتاحية
         };
     </script>
 </body>
