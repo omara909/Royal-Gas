@@ -25,7 +25,6 @@
         
         .btn-submit { background: var(--r-blue); color: white; border: none; padding: 12px 25px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; transition: 0.3s; }
         .btn-delete { background: var(--r-red); color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; }
-        .btn-print { background: #555; color: white; border: none; padding: 7px 15px; border-radius: 5px; cursor: pointer; font-size: 13px; margin-right: 5px; transition: 0.2s; }
         .btn-excel { background: var(--r-green); color: white; border: none; padding: 7px 15px; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.2s; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
@@ -134,7 +133,7 @@
                 <table id="analysisTable">
                     <thead>
                         <tr>
-                            <th>التاريخ</th><th>العميل</th><th>الفني</th><th>الحالة</th><th>ملاحظات التأجيل</th>
+                            <th>التاريخ</th><th>العميل</th><th>الفني</th><th>الحالة</th><th>ملاحظات الحالة</th>
                         </tr>
                     </thead>
                     <tbody id="analysisTableBody"></tbody>
@@ -186,7 +185,6 @@
 
         window.deleteTask = async (id) => { if(confirm("حذف نهائي؟")) await deleteDoc(doc(db, "tasks", id)); };
 
-        // جلب البيانات الأساسية
         onSnapshot(collection(db, "tasks"), (snapshot) => {
             allTasks = [];
             const taskTable = document.getElementById('taskTableBody');
@@ -224,7 +222,7 @@
             runAnalysis(); 
         });
 
-        // نظام التحليل المطور بفلتر اليوم
+        // نظام التحليل مع منطق الملاحظات الجديد
         window.runAnalysis = () => {
             const month = document.getElementById('filterMonth').value;
             const day = document.getElementById('filterDay').value;
@@ -234,7 +232,7 @@
             
             let filtered = allTasks.filter(t => {
                 if (!t.date) return false;
-                const parts = t.date.split('-'); // YYYY-MM-DD
+                const parts = t.date.split('-');
                 const taskMonth = parts[1];
                 const taskDay = parts[2];
 
@@ -252,13 +250,22 @@
             tableBody.innerHTML = '';
             filtered.forEach(f => {
                 const sClass = f.status === 'تمت الزيارة' ? 'badge-done' : (f.status === 'مؤجلة' ? 'badge-delayed' : (f.status === 'معلق' ? 'badge-pending' : 'badge-canceled'));
+                
+                // منطق عرض الملاحظات المطلوب
+                let statusNote = f.note || '-';
+                if (f.status === 'ملغاة') {
+                    statusNote = '<span style="color:var(--r-red)">⚠️ تم الإلغاء بواسطة الفني</span>';
+                } else if (f.status === 'مؤجلة') {
+                    statusNote = `📅 موعد التأجيل: <b>${f.date}</b>`;
+                }
+
                 tableBody.innerHTML += `
                     <tr>
                         <td>${f.date}</td>
                         <td><b>${f.clientName}</b></td>
                         <td>${f.techEmail ? f.techEmail.split('@')[0] : '-'}</td>
                         <td><span class="badge ${sClass}">${f.status}</span></td>
-                        <td>${f.status === 'مؤجلة' ? '🕒 تأجلت من تاريخ الأصلي' : (f.note || '-')}</td>
+                        <td>${statusNote}</td>
                     </tr>`;
             });
         };
@@ -268,7 +275,7 @@
             const ws = XLSX.utils.table_to_sheet(table);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "التقرير");
-            XLSX.writeFile(wb, `RoyalGas_Report_${new Date().toLocaleDateString()}.xlsx`);
+            XLSX.writeFile(wb, `Report_RoyalGas.xlsx`);
         };
 
         onSnapshot(collection(db, "technicians"), (snapshot) => {
@@ -284,7 +291,7 @@
                     opt.value = tech.email; opt.text = tech.name;
                     s.appendChild(opt);
                 });
-                techTable.innerHTML += `<tr><td>${tech.name}</td><td>${tech.email}</td><td><button class="btn-delete" onclick="deleteTech('${sDoc.id}')">حذف</button></td></tr>`;
+                techTable.innerHTML += `<tr><td>${tech.name}</td><td>${tech.email}</td><td><button class="btn-delete" onclick="window.deleteTech('${sDoc.id}')">حذف</button></td></tr>`;
             });
         });
 
@@ -303,7 +310,8 @@
                 complaint: document.getElementById('complaint').value,
                 techEmail: document.getElementById('techSelect').value,
                 date: document.getElementById('taskDate').value,
-                status: "معلق"
+                status: "معلق",
+                note: ""
             };
             await addDoc(collection(db, "tasks"), data);
             alert("تم التكليف ✅");
