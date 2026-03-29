@@ -133,7 +133,7 @@
                 <table id="analysisTable">
                     <thead>
                         <tr>
-                            <th>التاريخ</th><th>العميل</th><th>الفني</th><th>الحالة</th><th>ملاحظات الحالة</th>
+                            <th>تاريخ الزيارة</th><th>العميل</th><th>الفني</th><th>الحالة</th><th>ملاحظات التأجيل/الإلغاء</th>
                         </tr>
                     </thead>
                     <tbody id="analysisTableBody"></tbody>
@@ -222,7 +222,7 @@
             runAnalysis(); 
         });
 
-        // نظام التحليل مع منطق الملاحظات الجديد
+        // نظام التحليل المحدث بناءً على طلبك
         window.runAnalysis = () => {
             const month = document.getElementById('filterMonth').value;
             const day = document.getElementById('filterDay').value;
@@ -251,17 +251,22 @@
             filtered.forEach(f => {
                 const sClass = f.status === 'تمت الزيارة' ? 'badge-done' : (f.status === 'مؤجلة' ? 'badge-delayed' : (f.status === 'معلق' ? 'badge-pending' : 'badge-canceled'));
                 
-                // منطق عرض الملاحظات المطلوب
+                // المتغيرات للتحكم في العرض المطلوب
+                let displayDate = f.date; // التاريخ الافتراضي
                 let statusNote = f.note || '-';
-                if (f.status === 'ملغاة') {
+
+                if (f.status === 'مؤجلة') {
+                    // في حال التأجيل: 
+                    // التاريخ يظل تاريخ الزيارة (date) 
+                    // الملاحظات تأخذ تاريخ التأجيل الجديد (newDate) المسجل من تطبيق الفني
+                    statusNote = f.newDate ? `📅 تأجلت إلى: <b>${f.newDate}</b>` : 'تأجلت (لم يحدد موعد)';
+                } else if (f.status === 'ملغاة') {
                     statusNote = '<span style="color:var(--r-red)">⚠️ تم الإلغاء بواسطة الفني</span>';
-                } else if (f.status === 'مؤجلة') {
-                    statusNote = `📅 موعد التأجيل: <b>${f.date}</b>`;
                 }
 
                 tableBody.innerHTML += `
                     <tr>
-                        <td>${f.date}</td>
+                        <td>${displayDate}</td>
                         <td><b>${f.clientName}</b></td>
                         <td>${f.techEmail ? f.techEmail.split('@')[0] : '-'}</td>
                         <td><span class="badge ${sClass}">${f.status}</span></td>
@@ -275,7 +280,7 @@
             const ws = XLSX.utils.table_to_sheet(table);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "التقرير");
-            XLSX.writeFile(wb, `Report_RoyalGas.xlsx`);
+            XLSX.writeFile(wb, `RoyalGas_Report.xlsx`);
         };
 
         onSnapshot(collection(db, "technicians"), (snapshot) => {
@@ -310,8 +315,7 @@
                 complaint: document.getElementById('complaint').value,
                 techEmail: document.getElementById('techSelect').value,
                 date: document.getElementById('taskDate').value,
-                status: "معلق",
-                note: ""
+                status: "معلق"
             };
             await addDoc(collection(db, "tasks"), data);
             alert("تم التكليف ✅");
