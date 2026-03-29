@@ -104,7 +104,7 @@
             <div class="stats-grid">
                 <div class="stat-card"><h3>إجمالي البحث</h3><p id="anaTotal">0</p></div>
                 <div class="stat-card"><h3>تم التنفيذ</h3><p id="anaDone" style="color: var(--r-green);">0</p></div>
-                <div class="stat-card)<h3>تم تأجيلها</h3><p id="anaDelayed" style="color: var(--r-orange);">0</p></div>
+                <div class="stat-card"><h3>تم تأجيلها</h3><p id="anaDelayed" style="color: var(--r-orange);">0</p></div>
                 <div class="stat-card"><h3>ملغاة</h3><p id="anaCanceled" style="color: var(--r-red);">0</p></div>
             </div>
 
@@ -138,15 +138,26 @@
 
     <script type="module">
         // ---------------------------------------------------------
-        // نظام الحماية: التحقق من تسجيل الدخول
-        if (localStorage.getItem("adminLoggedIn") !== "true") {
-            window.location.href = "index.html";
+        // نظام الحماية المعدل (بمنع الخروج المفاجئ)
+        // ---------------------------------------------------------
+        function checkAuth() {
+            const status = localStorage.getItem("adminLoggedIn");
+            if (status !== "true") {
+                // استنى 800 مللي ثانية عشان ندي فرصة لـ Firebase والصفحة السابقة
+                setTimeout(() => {
+                    if (localStorage.getItem("adminLoggedIn") !== "true") {
+                        window.location.replace("index.html");
+                    }
+                }, 800);
+            }
         }
+        checkAuth();
 
-        // دالة الخروج لمسح الرخصة من المتصفح
         window.logout = () => {
-            localStorage.removeItem("adminLoggedIn");
-            window.location.href = "index.html";
+            if(confirm("هل تريد تسجيل الخروج؟")) {
+                localStorage.removeItem("adminLoggedIn");
+                window.location.replace("index.html");
+            }
         };
         // ---------------------------------------------------------
 
@@ -165,7 +176,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         
-        // ... باقي الكود الخاص بك يكمل هنا كما هو بدون تغيير ...
         let allTasks = []; 
 
         window.showSection = (section) => {
