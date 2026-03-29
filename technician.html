@@ -35,7 +35,7 @@
         .btn-cancel { background: #eee; color: var(--accent); }
 
         .delay-box { display: none; background: #fff8e1; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #ffe082; }
-        .delay-box input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ddd; }
+        .delay-box input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; }
 
         .upload-input { display: none; }
         .loader { display: none; font-size: 14px; color: var(--main); text-align: center; font-weight: bold; margin: 10px 0; }
@@ -53,11 +53,11 @@
 
     <div class="stats-container">
         <div class="stat-card pending">
-            <small>مهام متبقية</small>
+            <small>مهام مطلوبة</small>
             <span id="pendingCount">0</span>
         </div>
         <div class="stat-card completed">
-            <small>تم إنجازها</small>
+            <small>إجمالي المنتهي</small>
             <span id="doneCount">0</span>
         </div>
     </div>
@@ -100,9 +100,11 @@
                     const t = snapshotDoc.data();
                     const id = snapshotDoc.id;
 
-                    if (t.status === "تمت الزيارة" || t.status === "ملغاة") {
+                    // الشرط الجديد: لو الحالة مش "معلق" (يعني خلصت أو اتلغت أو اتأجلت) تتحسب في العداد وتختفي
+                    if (t.status !== "معلق") {
                         doneNum++;
                     } else {
+                        // فقط الزيارات الـ "معلق" هي اللي تظهر للفني
                         pendingNum++;
                         html += `
                             <div class="task-card">
@@ -110,7 +112,7 @@
                                 <div class="info-item"><b>📍 العنوان:</b> <span>${t.address}</span></div>
                                 <div class="info-item"><b>📞 تليفون:</b> <span>${t.phone}</span></div>
                                 <div class="info-item"><b>💬 الشكوى:</b> <span>${t.complaint}</span></div>
-                                <div class="info-item"><b>📅 الموعد:</b> <span id="dateText_${id}">${t.date}</span></div>
+                                <div class="info-item"><b>📅 التاريخ:</b> <span>${t.date}</span></div>
 
                                 <div class="actions-area">
                                     <a href="tel:${t.phone}" class="btn btn-call">اتصال بالعميل 📞</a>
@@ -127,9 +129,9 @@
                                     </div>
 
                                     <div id="delayBox_${id}" class="delay-box">
-                                        <label style="font-size:12px; font-weight:bold;">اختر التاريخ الجديد:</label>
+                                        <label style="font-size:12px; font-weight:bold; color:#856404;">اختر تاريخ الزيارة القادم:</label>
                                         <input type="date" id="newDate_${id}">
-                                        <button onclick="window.confirmDelay('${id}')" class="btn btn-done">تأكيد التأجيل</button>
+                                        <button onclick="window.confirmDelay('${id}')" class="btn btn-done">تأكيد الموعد الجديد</button>
                                     </div>
 
                                     <p class="gps-notice" id="gps_${id}">سيتم تسجيل الموقع تلقائياً عند الإغلاق</p>
@@ -140,7 +142,10 @@
 
                 document.getElementById('pendingCount').innerText = pendingNum;
                 document.getElementById('doneCount').innerText = doneNum;
-                if (pendingNum === 0) html = "<div style='text-align:center; margin-top:40px; color:#888;'>✨ لا توجد مهام متبقية.</div>";
+                
+                if (pendingNum === 0) {
+                    html = "<div style='text-align:center; margin-top:40px; color:#888;'>✨ عمل رائع! لا توجد مهام حالية.</div>";
+                }
                 document.getElementById('tasksList').innerHTML = html;
             });
         } else {
@@ -148,15 +153,13 @@
         }
     });
 
-    // --- وظائف التحكم الجديدة ---
-
     // 1. إظهار/إخفاء صندوق التأجيل
     window.toggleDelayBox = (id) => {
         const box = document.getElementById(`delayBox_${id}`);
         box.style.display = box.style.display === "block" ? "none" : "block";
     };
 
-    // 2. تأكيد التأجيل
+    // 2. تأكيد التأجيل (هتختفي فوراً لأن الحالة هتتغير من معلق لـ مؤجلة)
     window.confirmDelay = async (id) => {
         const newDate = document.getElementById(`newDate_${id}`).value;
         if(!newDate) return alert("من فضلك اختر التاريخ الجديد");
@@ -165,35 +168,35 @@
             await updateDoc(doc(db, "tasks", id), {
                 status: "مؤجلة",
                 date: newDate,
-                note: "تم التأجيل بواسطة الفني"
+                updateTime: new Date().toLocaleString()
             });
-            alert("تم تأجيل الزيارة للموعد الجديد 🗓️");
+            alert("تم التأجيل بنجاح، ستختفي المهمة من قائمتك الآن.");
         } catch (e) {
-            alert("حدث خطأ");
+            alert("حدث خطأ في الاتصال");
         }
     };
 
-    // 3. إلغاء الزيارة
+    // 3. إلغاء الزيارة (هتختفي فوراً لأن الحالة هتتغير من معلق لـ ملغاة)
     window.cancelTask = async (id) => {
-        if (confirm("هل أنت متأكد من إلغاء هذه الزيارة؟ (بناءً على طلب العميل)")) {
+        if (confirm("هل تريد إلغاء هذه الزيارة نهائياً؟")) {
             try {
                 await updateDoc(doc(db, "tasks", id), {
                     status: "ملغاة",
                     finishTime: new Date().toLocaleString()
                 });
-                alert("تم إلغاء الزيارة");
+                alert("تم إلغاء المهمة بنجاح.");
             } catch (e) {
                 alert("حدث خطأ");
             }
         }
     };
 
-    // --- الوظائف القديمة (الرفع والإغلاق) ---
-    
+    // تسجيل الخروج
     document.getElementById('logoutBtn').addEventListener('click', () => {
         signOut(auth).then(() => window.location.href = "index.html");
     });
 
+    // رفع الفاتورة
     window.handleUpload = async (taskId) => {
         const fileInput = document.getElementById(`file_${taskId}`);
         const loader = document.getElementById(`loader_${taskId}`);
@@ -220,6 +223,7 @@
         }
     };
 
+    // إغلاق المهمة بالـ GPS
     window.finishTask = async (taskId) => {
         const doneBtn = document.getElementById(`btnDone_${taskId}`);
         const imageUrl = doneBtn.getAttribute('data-url');
@@ -234,9 +238,12 @@
                         finishTime: new Date().toLocaleString(),
                         location: { lat: position.coords.latitude, lng: position.coords.longitude }
                     });
-                    alert("تم إغلاق البلاغ بنجاح ✅");
-                } catch (e) { alert("خطأ: " + e.message); }
-            }, (error) => { alert("يرجى تفعيل الـ GPS"); }, { enableHighAccuracy: true });
+                    alert("تم إتمام الزيارة بنجاح ✅");
+                } catch (e) { alert("خطأ في التحديث"); }
+            }, (error) => { 
+                alert("برجاء تفعيل الموقع (GPS) لإغلاق الزيارة.");
+                gpsStatus.innerText = "❌ فشل تحديد الموقع";
+            }, { enableHighAccuracy: true });
         }
     };
 </script>
