@@ -44,7 +44,7 @@
         .badge-canceled { background: #eee; color: #555; }
         
         #addTechSection, #addTaskSection, #analysisSection { display: none; }
-        .filter-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; background: #f0f4f8; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        .filter-bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; background: #f0f4f8; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -55,23 +55,23 @@
             <a onclick="showSection('stats')" class="nav-link">📊 لوحة الأداء اليومي</a>
             <a onclick="showSection('addTask')" class="nav-link">📝 إرسال طلب صيانة</a>
             <a onclick="showSection('addTech')" class="nav-link">👷 إدارة الفنيين</a>
-            <a onclick="showSection('analysis')" class="nav-link" style="background: rgba(255,255,255,0.15);">📈 تحليل شامل (سنوي)</a>
+            <a onclick="showSection('analysis')" class="nav-link">📈 التحليل الشامل للسنة</a>
             <a href="index.html" class="nav-link" style="margin-top: 50px; background: var(--r-red);">🚪 تسجيل خروج</a>
         </nav>
     </div>
 
     <div class="main-content">
         <div id="statsSection">
-            <h1 style="color: var(--r-blue); font-weight: 900; margin-bottom: 5px;">مراقبة الأداء اللحظي</h1>
+            <h1 style="color: var(--r-blue); font-weight: 900; margin-bottom: 5px;">مراقبة الأداء اليومي</h1>
             <div class="stats-grid">
-                <div class="stat-card"><h3>فنيين نشطين</h3><p id="totalTechs">0</p></div>
+                <div class="stat-card"><h3>فنيين مسجلين</h3><p id="totalTechs">0</p></div>
                 <div class="stat-card"><h3>بلاغات اليوم</h3><p id="todayTotal">0</p></div>
-                <div class="stat-card"><h3>معلق الآن</h3><p id="pendingCount" style="color: var(--r-red);">0</p></div>
-                <div class="stat-card"><h3>تمت اليوم</h3><p id="completedCount" style="color: var(--r-green);">0</p></div>
+                <div class="stat-card"><h3>معلق (قيد الانتظار)</h3><p id="pendingCount" style="color: var(--r-red);">0</p></div>
+                <div class="stat-card"><h3>تم الانتهاء اليوم</h3><p id="completedCount" style="color: var(--r-green);">0</p></div>
             </div>
 
             <div class="action-section">
-                <h3 style="color: var(--r-blue);">📋 سجل المهام النشطة</h3>
+                <h3 style="color: var(--r-blue);">📋 المهام الجارية (اليوم)</h3>
                 <table id="taskTable">
                     <thead>
                         <tr>
@@ -84,9 +84,8 @@
         </div>
 
         <div id="analysisSection">
-            <h1 style="color: var(--r-blue); font-weight: 900;">التحليل السنوي الشامل</h1>
-            <p>يمكنك تصفية البيانات ومراجعة أداء السنة بالكامل من هنا</p>
-
+            <h1 style="color: var(--r-blue); font-weight: 900;">التحليل الشامل والبحث السنوي</h1>
+            
             <div class="filter-bar">
                 <div class="form-group">
                     <label>الشهر</label>
@@ -97,6 +96,10 @@
                         <option value="07">يوليو</option><option value="08">أغسطس</option><option value="09">سبتمبر</option>
                         <option value="10">أكتوبر</option><option value="11">نوفمبر</option><option value="12">ديسمبر</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label>اليوم المحدد</label>
+                    <input type="number" id="filterDay" class="form-control" placeholder="مثلاً: 15" min="1" max="31" oninput="runAnalysis()">
                 </div>
                 <div class="form-group">
                     <label>الحالة</label>
@@ -115,23 +118,23 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>تحميل تقرير</label>
-                    <button class="btn-excel" style="width:100%; height:45px" onclick="exportAnalysisExcel()">سحب إكسيل 📗</button>
+                    <label>تصدير</label>
+                    <button class="btn-excel" style="width:100%; height:45px" onclick="exportAnalysisExcel()">إكسيل 📗</button>
                 </div>
             </div>
 
             <div class="stats-grid">
-                <div class="stat-card"><h3>إجمالي الفلتر</h3><p id="anaTotal">0</p></div>
-                <div class="stat-card"><h3>مكتمل</h3><p id="anaDone" style="color: var(--r-green);">0</p></div>
-                <div class="stat-card"><h3>مؤجل</h3><p id="anaDelayed" style="color: var(--r-orange);">0</p></div>
-                <div class="stat-card"><h3>ملغي</h3><p id="anaCanceled" style="color: var(--r-red);">0</p></div>
+                <div class="stat-card"><h3>إجمالي البحث</h3><p id="anaTotal">0</p></div>
+                <div class="stat-card"><h3>تم التنفيذ</h3><p id="anaDone" style="color: var(--r-green);">0</p></div>
+                <div class="stat-card"><h3>تم تأجيلها</h3><p id="anaDelayed" style="color: var(--r-orange);">0</p></div>
+                <div class="stat-card"><h3>ملغاة</h3><p id="anaCanceled" style="color: var(--r-red);">0</p></div>
             </div>
 
             <div class="action-section">
                 <table id="analysisTable">
                     <thead>
                         <tr>
-                            <th>التاريخ الرسمي</th><th>العميل</th><th>الفني</th><th>الحالة</th><th>ملاحظات/تاريخ التأجيل</th>
+                            <th>التاريخ</th><th>العميل</th><th>الفني</th><th>الحالة</th><th>ملاحظات التأجيل</th>
                         </tr>
                     </thead>
                     <tbody id="analysisTableBody"></tbody>
@@ -140,28 +143,28 @@
         </div>
 
         <div id="addTaskSection" class="action-section">
-            <h2>إرسال طلب صيانة</h2>
+            <h2>إرسال طلب صيانة جديد</h2>
             <div class="form-group"><label>اسم العميل</label><input type="text" id="clientName" class="form-control"></div>
             <div class="form-group"><label>العنوان</label><input type="text" id="address" class="form-control"></div>
             <div class="form-group"><label>التليفون</label><input type="tel" id="phone" class="form-control"></div>
             <div class="form-group"><label>الشكوى</label><textarea id="complaint" class="form-control"></textarea></div>
-            <div class="form-group"><label>الفني</label><select id="techSelect" class="form-control"></select></div>
+            <div class="form-group"><label>الفني المختص</label><select id="techSelect" class="form-control"></select></div>
             <div class="form-group"><label>التاريخ</label><input type="date" id="taskDate" class="form-control"></div>
             <button class="btn-submit" id="sendBtn">إرسال التكليف ✅</button>
         </div>
 
         <div id="addTechSection" class="action-section">
-            <h2>إدارة الفنيين</h2>
+            <h2>إدارة طاقم الفنيين</h2>
             <div class="form-group"><label>الاسم</label><input type="text" id="newTechName" class="form-control"></div>
             <div class="form-group"><label>الإيميل</label><input type="email" id="newTechEmail" class="form-control"></div>
-            <button class="btn-submit" id="saveTechBtn" style="background: var(--r-green);">حفظ 💾</button>
+            <button class="btn-submit" id="saveTechBtn" style="background: var(--r-green);">حفظ الفني 💾</button>
             <table style="margin-top:20px"><thead><tr><th>الاسم</th><th>الإيميل</th><th>إجراء</th></tr></thead><tbody id="techTableBody"></tbody></table>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDFpWeQWHeLnNIC-81UNEEVz_LCa8NMWIc",
@@ -174,7 +177,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        let allTasks = []; // تخزين محلي للفلترة السريعة
+        let allTasks = []; 
 
         window.showSection = (section) => {
             const ids = ['statsSection', 'addTaskSection', 'addTechSection', 'analysisSection'];
@@ -198,11 +201,10 @@
 
                 if(t.date === todayStr) todayTotal++;
                 if(t.status === "معلق") pending++;
-                if(t.status === "تمت الزيارة" && t.finishTime?.includes(new Date().toLocaleDateString('en-GB'))) completed++;
+                if(t.status === "تمت الزيارة" && t.date === todayStr) completed++;
 
-                // عرض المهام النشطة فقط في اللوحة اليومية
                 if(t.status === "معلق" || t.date === todayStr) {
-                    const statusClass = t.status === 'معلق' ? 'badge-pending' : (t.status === 'تمت الزيارة' ? 'badge-done' : 'badge-delayed');
+                    const statusClass = t.status === 'معلق' ? 'badge-pending' : (t.status === 'تمت الزيارة' ? 'badge-done' : (t.status === 'مؤجلة' ? 'badge-delayed' : 'badge-canceled'));
                     taskTable.innerHTML += `
                         <tr>
                             <td>${t.clientName}</td>
@@ -219,24 +221,29 @@
             document.getElementById('pendingCount').innerText = pending;
             document.getElementById('completedCount').innerText = completed;
             document.getElementById('todayTotal').innerText = todayTotal;
-            runAnalysis(); // تحديث التحليل تلقائياً عند تغيير أي داتا
+            runAnalysis(); 
         });
 
-        // نظام التحليل الذكي
+        // نظام التحليل المطور بفلتر اليوم
         window.runAnalysis = () => {
             const month = document.getElementById('filterMonth').value;
+            const day = document.getElementById('filterDay').value;
             const status = document.getElementById('filterStatus').value;
             const tech = document.getElementById('filterTech').value;
             const tableBody = document.getElementById('analysisTableBody');
             
             let filtered = allTasks.filter(t => {
-                const taskMonth = t.date ? t.date.split('-')[1] : '';
+                if (!t.date) return false;
+                const parts = t.date.split('-'); // YYYY-MM-DD
+                const taskMonth = parts[1];
+                const taskDay = parts[2];
+
                 return (month === '' || taskMonth === month) &&
+                       (day === '' || parseInt(taskDay) === parseInt(day)) &&
                        (status === '' || t.status === status) &&
                        (tech === '' || t.techEmail === tech);
             });
 
-            // تحديث إحصائيات التحليل
             document.getElementById('anaTotal').innerText = filtered.length;
             document.getElementById('anaDone').innerText = filtered.filter(f => f.status === 'تمت الزيارة').length;
             document.getElementById('anaDelayed').innerText = filtered.filter(f => f.status === 'مؤجلة').length;
@@ -244,36 +251,32 @@
 
             tableBody.innerHTML = '';
             filtered.forEach(f => {
-                const sClass = f.status === 'تمت الزيارة' ? 'badge-done' : (f.status === 'مؤجلة' ? 'badge-delayed' : 'badge-canceled');
+                const sClass = f.status === 'تمت الزيارة' ? 'badge-done' : (f.status === 'مؤجلة' ? 'badge-delayed' : (f.status === 'معلق' ? 'badge-pending' : 'badge-canceled'));
                 tableBody.innerHTML += `
                     <tr>
                         <td>${f.date}</td>
                         <td><b>${f.clientName}</b></td>
                         <td>${f.techEmail ? f.techEmail.split('@')[0] : '-'}</td>
                         <td><span class="badge ${sClass}">${f.status}</span></td>
-                        <td>${f.status === 'مؤجلة' ? '📅 موعد جديد: ' + f.date : (f.note || '-')}</td>
+                        <td>${f.status === 'مؤجلة' ? '🕒 تأجلت من تاريخ الأصلي' : (f.note || '-')}</td>
                     </tr>`;
             });
         };
 
-        // تصدير إكسيل للتحليل المفلتر فقط
         window.exportAnalysisExcel = () => {
             const table = document.getElementById("analysisTable");
             const ws = XLSX.utils.table_to_sheet(table);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "التحليل");
-            XLSX.writeFile(wb, `تقرير_تحليلي_رويال_جاز.xlsx`);
+            XLSX.utils.book_append_sheet(wb, ws, "التقرير");
+            XLSX.writeFile(wb, `RoyalGas_Report_${new Date().toLocaleDateString()}.xlsx`);
         };
 
-        // جلب الفنيين للقوائم
         onSnapshot(collection(db, "technicians"), (snapshot) => {
             const selects = [document.getElementById('techSelect'), document.getElementById('filterTech')];
             const techTable = document.getElementById('techTableBody');
-            
             selects.forEach(s => s.innerHTML = '<option value="">-- الكل --</option>');
             techTable.innerHTML = '';
             document.getElementById('totalTechs').innerText = snapshot.size;
-
             snapshot.forEach((sDoc) => {
                 const tech = sDoc.data();
                 selects.forEach(s => {
@@ -281,11 +284,10 @@
                     opt.value = tech.email; opt.text = tech.name;
                     s.appendChild(opt);
                 });
-                techTable.innerHTML += `<tr><td>${tech.name}</td><td>${tech.email}</td><td><button class="btn-delete" onclick="window.deleteTech('${sDoc.id}')">حذف</button></td></tr>`;
+                techTable.innerHTML += `<tr><td>${tech.name}</td><td>${tech.email}</td><td><button class="btn-delete" onclick="deleteTech('${sDoc.id}')">حذف</button></td></tr>`;
             });
         });
 
-        // (نفس وظائف الإضافة السابقة بدون تغيير)
         document.getElementById('saveTechBtn').addEventListener('click', async () => {
             const name = document.getElementById('newTechName').value;
             const email = document.getElementById('newTechEmail').value;
@@ -301,9 +303,7 @@
                 complaint: document.getElementById('complaint').value,
                 techEmail: document.getElementById('techSelect').value,
                 date: document.getElementById('taskDate').value,
-                status: "معلق",
-                billPhoto: null,
-                location: null
+                status: "معلق"
             };
             await addDoc(collection(db, "tasks"), data);
             alert("تم التكليف ✅");
