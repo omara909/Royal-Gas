@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Royal Gas - Admin Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
         :root { --r-blue: #0b4a99; --r-red: #ce2029; --r-green: #28a745; --bg: #f8f9fa; }
@@ -24,7 +25,9 @@
         
         .btn-submit { background: var(--r-blue); color: white; border: none; padding: 12px 25px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; transition: 0.3s; }
         .btn-delete { background: var(--r-red); color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; }
-        .btn-print { background: #555; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; margin-right: 5px; }
+        .btn-print { background: #555; color: white; border: none; padding: 7px 15px; border-radius: 5px; cursor: pointer; font-size: 13px; margin-right: 5px; transition: 0.2s; }
+        .btn-excel { background: var(--r-green); color: white; border: none; padding: 7px 15px; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.2s; }
+        .btn-excel:hover, .btn-print:hover { opacity: 0.8; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
         th, td { padding: 12px; text-align: right; border-bottom: 1px solid #eee; font-size: 13px; }
@@ -71,9 +74,12 @@
             <div class="action-section">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <h3 style="color: var(--r-blue); margin: 0;">📋 سجل العمليات والتقارير اليومية</h3>
-                    <button class="btn-print" onclick="window.print()">🖨️ طباعة التقرير العام</button>
+                    <div>
+                        <button class="btn-excel" onclick="exportToExcel()">Excel سحب البيانات 📗</button>
+                        <button class="btn-print" onclick="window.print()">🖨️ طباعة</button>
+                    </div>
                 </div>
-                <table>
+                <table id="taskTable">
                     <thead>
                         <tr>
                             <th>العميل</th>
@@ -135,6 +141,19 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // --- وظيفة استخراج الداتا لاكسيل ---
+        window.exportToExcel = () => {
+            const table = document.getElementById("taskTable");
+            // تحويل الجدول لبيانات (مع استثناء آخر عمود "إجراء")
+            const ws = XLSX.utils.table_to_sheet(table);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "الزيارات");
+            
+            // تحميل الملف باسم التاريخ الحالي
+            const date = new Date().toLocaleDateString('ar-EG').replace(/\//g, '-');
+            XLSX.writeFile(wb, `تقرير_رويال_جاز_${date}.xlsx`);
+        };
+
         window.showSection = (section) => {
             document.getElementById('statsSection').style.display = section === 'stats' ? 'block' : 'none';
             document.getElementById('addTaskSection').style.display = section === 'addTask' ? 'block' : 'none';
@@ -144,39 +163,24 @@
         window.deleteTask = async (id) => { if(confirm("حذف هذا البلاغ نهائياً؟")) await deleteDoc(doc(db, "tasks", id)); };
         window.deleteTech = async (id) => { if(confirm("حذف الفني؟")) await deleteDoc(doc(db, "technicians", id)); };
 
-        // --- مراقبة المهام وحساب الإحصائيات ---
         onSnapshot(collection(db, "tasks"), (snapshot) => {
             const taskTable = document.getElementById('taskTableBody');
             let pending = 0, completed = 0, todayTotal = 0;
             let techStats = {};
-            
-            // الحصول على تاريخ اليوم بصيغة YYYY-MM-DD
             const todayStr = new Date().toISOString().split('T')[0];
-            
             taskTable.innerHTML = '';
 
             snapshot.forEach((docSnap) => {
                 const t = docSnap.data();
-                const id = docSnap.id;
-                
-                // حساب إجمالي بلاغات اليوم
-                if(t.date === todayStr) {
-                    todayTotal++;
-                }
-
+                if(t.date === todayStr) todayTotal++;
                 if(t.status === "معلق") pending++;
                 else {
                     completed++;
                     techStats[t.techEmail] = (techStats[t.techEmail] || 0) + 1;
                 }
 
-                const mapBtn = t.location 
-                    ? `<a href="https://www.google.com/maps?q=${t.location.lat},${t.location.lng}" target="_blank" class="map-link">📍 خريطة</a>` 
-                    : '<span style="color:#ccc">N/A</span>';
-
-                const billContent = t.billPhoto 
-                    ? `<a href="${t.billPhoto}" target="_blank" style="color:var(--r-blue); font-weight:bold; text-decoration:none;">🖼️ عرض</a>` 
-                    : `<span style="color:#ccc">معلق</span>`;
+                const mapBtn = t.location ? `<a href="https://www.google.com/maps?q=${t.location.lat},${t.location.lng}" target="_blank" class="map-link">📍 خريطة</a>` : 'N/A';
+                const billContent = t.billPhoto ? `<a href="${t.billPhoto}" target="_blank">🖼️ عرض</a>` : `معلق`;
 
                 taskTable.innerHTML += `
                     <tr>
@@ -186,19 +190,18 @@
                         <td>${mapBtn}</td>
                         <td>${billContent}</td>
                         <td>${t.finishTime || t.date}</td>
-                        <td><button class="btn-delete" onclick="deleteTask('${id}')">حذف</button></td>
+                        <td><button class="btn-delete" onclick="deleteTask('${docSnap.id}')">حذف</button></td>
                     </tr>`;
             });
 
             document.getElementById('pendingCount').innerText = pending;
             document.getElementById('completedCount').innerText = completed;
-            document.getElementById('todayTotal').innerText = todayTotal; // تحديث الكارت الجديد
-            
+            document.getElementById('todayTotal').innerText = todayTotal;
             const top = Object.entries(techStats).sort((a,b) => b[1] - a[1])[0];
             document.getElementById('topTech').innerText = top ? `${top[0].split('@')[0]} (${top[1]})` : "-";
         });
 
-        // بقية دوال المراقبة والإضافة (الفنيين والمهام)
+        // مراقبة الفنيين
         onSnapshot(collection(db, "technicians"), (snapshot) => {
             const select = document.getElementById('techSelect');
             const techTable = document.getElementById('techTableBody');
@@ -207,11 +210,10 @@
             document.getElementById('totalTechs').innerText = snapshot.size;
             snapshot.forEach((snapshotDoc) => {
                 const tech = snapshotDoc.data();
-                const id = snapshotDoc.id;
                 const opt = document.createElement('option');
                 opt.value = tech.email; opt.text = tech.name;
                 select.appendChild(opt);
-                techTable.innerHTML += `<tr><td>${tech.name}</td><td>${tech.email}</td><td><button class="btn-delete" onclick="deleteTech('${id}')">حذف</button></td></tr>`;
+                techTable.innerHTML += `<tr><td>${tech.name}</td><td>${tech.email}</td><td><button class="btn-delete" onclick="deleteTech('${snapshotDoc.id}')">حذف</button></td></tr>`;
             });
         });
 
