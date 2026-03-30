@@ -177,28 +177,25 @@
 
         window.showSection = (section) => {
             const ids = ['statsSection', 'addTaskSection', 'addTechSection', 'analysisSection'];
-            ids.forEach(id => document.getElementById(id).style.display = id.startsWith(section) ? 'block' : 'none');
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.style.display = id.startsWith(section) ? 'block' : 'none';
+            });
         };
 
         window.deleteTask = async (id) => { if(confirm("حذف نهائي؟")) await deleteDoc(doc(db, "tasks", id)); };
 
-        // --- الدالة المعدلة لمتابعة التوقيت ---
+        // --- دالة متابعة التوقيت ---
         function getFollowUpStatus(task) {
             const now = new Date();
             const todayStr = now.toISOString().split('T')[0];
             const taskDate = task.date;
 
-            // 1. إذا كانت الحالة منتهية أو ملغاة
-            if (task.status === "تمت الزيارة" || task.status === "ملغاة") {
-                return '<span class="status-finished">منتهية</span>';
-            }
+            if (task.status === "تمت الزيارة" || task.status === "ملغاة") return '<span class="status-finished">منتهية</span>';
+            if (task.status === "مؤجلة") return '<span style="color:var(--r-orange)">مؤجلة</span>';
 
-            // 2. إذا كان تاريخ المهمة قديم ولم تنتهِ
-            if (taskDate < todayStr && task.status === "معلق") {
-                return '<span class="status-missed">فائتة</span>';
-            }
+            if (taskDate < todayStr && task.status === "معلق") return '<span class="status-missed">فائتة</span>';
 
-            // 3. المتابعة اليومية (تظهر متأخر بعد الساعة 3 مساءً)
             const isToday = (taskDate === todayStr);
             const currentHour = now.getHours();
 
@@ -221,15 +218,17 @@
                 t.id = docSnap.id;
                 allTasks.push(t);
                 
+                // إحصائيات عامة
                 if(t.date === todayStr) todayTotal++;
                 if(t.status === "معلق") pending++;
                 if(t.status === "تمت الزيارة" && t.date === todayStr) completed++;
                 
-                if(t.status === "معلق" || t.date === todayStr || t.date < todayStr) {
+                // --- شرط العرض في اللوحة اليومية ---
+                // تظهر المهام لو: (تاريخها اليوم "بأي حالة") أو (حالتها معلقة وتاريخها قديم)
+                if(t.date === todayStr || (t.status === "معلق" && t.date < todayStr)) {
                     const statusClass = t.status === 'معلق' ? 'badge-pending' : (t.status === 'تمت الزيارة' ? 'badge-done' : (t.status === 'مؤجلة' ? 'badge-delayed' : 'badge-canceled'));
                     const followUp = getFollowUpStatus(t);
                     
-                    // إصلاح رابط الموقع والفاتورة
                     const locLink = t.location ? `<a href="https://www.google.com/maps?q=${t.location}" target="_blank" class="view-link">📍 خريطة</a>` : 'N/A';
                     const billLink = t.billPhoto ? `<a href="${t.billPhoto}" target="_blank" class="view-link">🖼️ عرض</a>` : 'لا يوجد';
 
@@ -298,17 +297,19 @@
         onSnapshot(collection(db, "technicians"), (snapshot) => {
             const selects = [document.getElementById('techSelect'), document.getElementById('filterTech')];
             const techTable = document.getElementById('techTableBody');
-            selects.forEach(s => s.innerHTML = '<option value="">-- الكل --</option>');
-            techTable.innerHTML = '';
+            selects.forEach(s => { if(s) s.innerHTML = '<option value="">-- الكل --</option>'; });
+            if(techTable) techTable.innerHTML = '';
             document.getElementById('totalTechs').innerText = snapshot.size;
             snapshot.forEach((sDoc) => {
                 const tech = sDoc.data();
                 selects.forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = tech.email; opt.text = tech.name;
-                    s.appendChild(opt);
+                    if(s) {
+                        const opt = document.createElement('option');
+                        opt.value = tech.email; opt.text = tech.name;
+                        s.appendChild(opt);
+                    }
                 });
-                techTable.innerHTML += `<tr><td>${tech.name}</td><td>${tech.email}</td><td><button class="btn-delete" onclick="window.deleteTech('${sDoc.id}')">حذف</button></td></tr>`;
+                if(techTable) techTable.innerHTML += `<tr><td>${tech.name}</td><td>${tech.email}</td><td><button class="btn-delete" onclick="window.deleteTech('${sDoc.id}')">حذف</button></td></tr>`;
             });
         });
 
@@ -332,6 +333,11 @@
             if(!data.clientName || !data.techEmail || !data.date) return alert("برجاء ملء البيانات");
             await addDoc(collection(db, "tasks"), data);
             alert("تم التكليف ✅");
+            // مسح البيانات بعد الإرسال
+            document.getElementById('clientName').value = '';
+            document.getElementById('address').value = '';
+            document.getElementById('phone').value = '';
+            document.getElementById('complaint').value = '';
         });
 
         document.getElementById('taskDate').valueAsDate = new Date();
