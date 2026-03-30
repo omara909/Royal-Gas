@@ -156,13 +156,16 @@
         box.style.display = box.style.display === "block" ? "none" : "block";
     };
 
+    // ✅ الإصلاح: حفظ createdDate عند التأجيل
     window.confirmDelay = async (id) => {
         const newDate = document.getElementById(`newDate_${id}`).value;
-        if(!newDate) return alert("من فضلك اختر التاريخ الجديد");
+        if (!newDate) return alert("من فضلك اختر التاريخ الجديد");
         try {
+            const today = new Date().toISOString().split('T')[0];
             await updateDoc(doc(db, "tasks", id), {
                 status: "مؤجلة",
                 date: newDate,
+                createdDate: today,        // ✅ حفظ تاريخ اليوم اللي اتأجلت فيه
                 updateTime: new Date().toLocaleString()
             });
             alert("تم التأجيل بنجاح.");
@@ -211,7 +214,6 @@
         }
     };
 
-    // --- الوظيفة المعدلة لإرسال اللوكيشن كـ String ---
     window.finishTask = async (taskId) => {
         const doneBtn = document.getElementById(`btnDone_${taskId}`);
         const imageUrl = doneBtn.getAttribute('data-url');
@@ -221,7 +223,6 @@
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(async (position) => {
                 try {
-                    // تحويل الإحداثيات لنص مفصل بفاصلة
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
                     const locationString = `${lat},${lng}`;
@@ -230,7 +231,7 @@
                         status: "تمت الزيارة",
                         billPhoto: imageUrl,
                         finishTime: new Date().toLocaleString(),
-                        location: locationString // الآن يتم الحفظ كنص String وليس كـ Object
+                        location: locationString
                     });
                     alert("تم إتمام الزيارة بنجاح ✅");
                 } catch (e) { alert("خطأ في التحديث"); }
