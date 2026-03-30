@@ -100,11 +100,9 @@
                     const t = snapshotDoc.data();
                     const id = snapshotDoc.id;
 
-                    // الشرط الجديد: لو الحالة مش "معلق" (يعني خلصت أو اتلغت أو اتأجلت) تتحسب في العداد وتختفي
                     if (t.status !== "معلق") {
                         doneNum++;
                     } else {
-                        // فقط الزيارات الـ "معلق" هي اللي تظهر للفني
                         pendingNum++;
                         html += `
                             <div class="task-card">
@@ -153,30 +151,24 @@
         }
     });
 
-    // 1. إظهار/إخفاء صندوق التأجيل
     window.toggleDelayBox = (id) => {
         const box = document.getElementById(`delayBox_${id}`);
         box.style.display = box.style.display === "block" ? "none" : "block";
     };
 
-    // 2. تأكيد التأجيل (هتختفي فوراً لأن الحالة هتتغير من معلق لـ مؤجلة)
     window.confirmDelay = async (id) => {
         const newDate = document.getElementById(`newDate_${id}`).value;
         if(!newDate) return alert("من فضلك اختر التاريخ الجديد");
-        
         try {
             await updateDoc(doc(db, "tasks", id), {
                 status: "مؤجلة",
                 date: newDate,
                 updateTime: new Date().toLocaleString()
             });
-            alert("تم التأجيل بنجاح، ستختفي المهمة من قائمتك الآن.");
-        } catch (e) {
-            alert("حدث خطأ في الاتصال");
-        }
+            alert("تم التأجيل بنجاح.");
+        } catch (e) { alert("حدث خطأ"); }
     };
 
-    // 3. إلغاء الزيارة (هتختفي فوراً لأن الحالة هتتغير من معلق لـ ملغاة)
     window.cancelTask = async (id) => {
         if (confirm("هل تريد إلغاء هذه الزيارة نهائياً؟")) {
             try {
@@ -185,18 +177,14 @@
                     finishTime: new Date().toLocaleString()
                 });
                 alert("تم إلغاء المهمة بنجاح.");
-            } catch (e) {
-                alert("حدث خطأ");
-            }
+            } catch (e) { alert("حدث خطأ"); }
         }
     };
 
-    // تسجيل الخروج
     document.getElementById('logoutBtn').addEventListener('click', () => {
         signOut(auth).then(() => window.location.href = "index.html");
     });
 
-    // رفع الفاتورة
     window.handleUpload = async (taskId) => {
         const fileInput = document.getElementById(`file_${taskId}`);
         const loader = document.getElementById(`loader_${taskId}`);
@@ -223,27 +211,35 @@
         }
     };
 
-    // إغلاق المهمة بالـ GPS
+    // --- الوظيفة المعدلة لإرسال اللوكيشن كـ String ---
     window.finishTask = async (taskId) => {
         const doneBtn = document.getElementById(`btnDone_${taskId}`);
         const imageUrl = doneBtn.getAttribute('data-url');
         const gpsStatus = document.getElementById(`gps_${taskId}`);
         gpsStatus.innerText = "📍 جاري تحديد موقعك...";
+
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(async (position) => {
                 try {
+                    // تحويل الإحداثيات لنص مفصل بفاصلة
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const locationString = `${lat},${lng}`;
+
                     await updateDoc(doc(db, "tasks", taskId), {
                         status: "تمت الزيارة",
                         billPhoto: imageUrl,
                         finishTime: new Date().toLocaleString(),
-                        location: { lat: position.coords.latitude, lng: position.coords.longitude }
+                        location: locationString // الآن يتم الحفظ كنص String وليس كـ Object
                     });
                     alert("تم إتمام الزيارة بنجاح ✅");
                 } catch (e) { alert("خطأ في التحديث"); }
             }, (error) => { 
-                alert("برجاء تفعيل الموقع (GPS) لإغلاق الزيارة.");
+                alert("برجاء تفعيل الموقع (GPS) والسماح للمتصفح بالوصول إليه لإغلاق الزيارة.");
                 gpsStatus.innerText = "❌ فشل تحديد الموقع";
-            }, { enableHighAccuracy: true });
+            }, { enableHighAccuracy: true, timeout: 10000 });
+        } else {
+            alert("المتصفح لا يدعم تحديد الموقع");
         }
     };
 </script>
