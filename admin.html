@@ -141,7 +141,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Auth Check
         function checkAuth() {
             const status = localStorage.getItem("adminLoggedIn");
             if (status !== "true") {
@@ -185,14 +184,14 @@
 
         window.deleteTask = async (id) => { if(confirm("حذف نهائي؟")) await deleteDoc(doc(db, "tasks", id)); };
 
-        // --- دالة متابعة التوقيت ---
         function getFollowUpStatus(task) {
             const now = new Date();
             const todayStr = now.toISOString().split('T')[0];
             const taskDate = task.date;
 
             if (task.status === "تمت الزيارة" || task.status === "ملغاة") return '<span class="status-finished">منتهية</span>';
-            if (task.status === "مؤجلة") return '<span style="color:var(--r-orange)">مؤجلة</span>';
+            // ✅ التعديل 1: عرض تاريخ التأجيل الجديد
+            if (task.status === "مؤجلة") return '<span class="badge badge-delayed">مؤجلة لـ ' + task.date + '</span>';
 
             if (taskDate < todayStr && task.status === "معلق") return '<span class="status-missed">فائتة</span>';
 
@@ -218,14 +217,12 @@
                 t.id = docSnap.id;
                 allTasks.push(t);
                 
-                // إحصائيات عامة
                 if(t.date === todayStr) todayTotal++;
                 if(t.status === "معلق") pending++;
                 if(t.status === "تمت الزيارة" && t.date === todayStr) completed++;
                 
-                // --- شرط العرض في اللوحة اليومية ---
-                // تظهر المهام لو: (تاريخها اليوم "بأي حالة") أو (حالتها معلقة وتاريخها قديم)
-                if(t.date === todayStr || (t.status === "معلق" && t.date < todayStr)) {
+                // ✅ التعديل 2: المؤجلة تظهر لو اتأجلت النهارده
+                if(t.date === todayStr || (t.status === "معلق" && t.date < todayStr) || (t.status === "مؤجلة" && t.createdDate === todayStr)) {
                     const statusClass = t.status === 'معلق' ? 'badge-pending' : (t.status === 'تمت الزيارة' ? 'badge-done' : (t.status === 'مؤجلة' ? 'badge-delayed' : 'badge-canceled'));
                     const followUp = getFollowUpStatus(t);
                     
@@ -333,7 +330,6 @@
             if(!data.clientName || !data.techEmail || !data.date) return alert("برجاء ملء البيانات");
             await addDoc(collection(db, "tasks"), data);
             alert("تم التكليف ✅");
-            // مسح البيانات بعد الإرسال
             document.getElementById('clientName').value = '';
             document.getElementById('address').value = '';
             document.getElementById('phone').value = '';
