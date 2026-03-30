@@ -54,8 +54,8 @@
         /* Professional Table Design */
         .table-card { background: white; border-radius: 20px; padding: 25px; box-shadow: var(--card-shadow); overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { background: #f8fafc; padding: 18px 15px; text-align: right; color: var(--royal-blue); font-weight: 800; border-bottom: 2px solid #edf2f7; font-size: 14px; }
-        td { padding: 15px; border-bottom: 1px solid #f1f5f9; font-size: 14px; font-weight: 600; color: #444; }
+        th { background: #f8fafc; padding: 18px 15px; text-align: right; color: var(--royal-blue); font-weight: 800; border-bottom: 2px solid #edf2f7; font-size: 14px; white-space: nowrap; }
+        td { padding: 15px; border-bottom: 1px solid #f1f5f9; font-size: 14px; font-weight: 600; color: #444; white-space: nowrap; }
         tbody tr:hover { background: #f9fbff; }
 
         /* Form Controls & Filter Bar */
@@ -185,7 +185,7 @@
                 <table id="analysisTable">
                     <thead>
                         <tr>
-                            <th>التاريخ</th><th>اسم العميل</th><th>الفني</th><th>الحالة</th><th>الموقع</th><th>الفاتورة</th><th>ملاحظات</th>
+                            <th>التاريخ</th><th>اسم العميل</th><th>الفني</th><th>الحالة</th><th>الموقع</th><th>الفاتورة</th><th style="white-space: normal; min-width: 250px;">ملاحظات</th>
                         </tr>
                     </thead>
                     <tbody id="analysisTableBody"></tbody>
@@ -321,6 +321,8 @@
                     let timeStatus = "مستقرة";
                     if(t.status === "تمت الزيارة") {
                         timeStatus = "منتهية ✅";
+                    } else if(t.status === "ملغاة") {
+                        timeStatus = "ملغاة ❌";
                     } else if(currentHour >= 15) {
                         timeStatus = "متأخرة ⚠️";
                     }
@@ -331,7 +333,7 @@
                         <td>${techMap[t.techEmail] || t.techEmail}</td>
                         <td>${t.date}</td>
                         <td><span class="badge ${sClass}">${t.status}</span></td>
-                        <td><b style="color: ${timeStatus.includes('متأخرة')?'red':'green'}">${timeStatus}</b></td>
+                        <td><b style="color: ${timeStatus.includes('متأخرة') || timeStatus.includes('ملغاة') ?'red':'green'}">${timeStatus}</b></td>
                         <td>${t.location ? `<a href="https://www.google.com/maps?q=${t.location}" target="_blank" class="icon-btn">📍</a>` : '-'}</td>
                         <td>${t.billPhoto ? `<a href="${t.billPhoto}" target="_blank" class="icon-btn">🖼️</a>` : '-'}</td>
                         <td><button class="btn-red" onclick="window.delDoc('tasks','${t.id}')">🗑️</button></td>
@@ -361,6 +363,23 @@
 
             filtered.forEach(item => {
                 const sClass = item.status==='معلق'?'bg-pending':(item.status==='تمت الزيارة'?'bg-done':'bg-delay');
+                
+                // منطق الملاحظات الجديد
+                let finalNote = "";
+                if(item.status === "ملغاة") {
+                    finalNote = "تم الإلغاء من الفني";
+                } else if(item.status === "مؤجلة") {
+                    finalNote = `تاريخ التأجيل: ${item.date}`;
+                } else if(item.status === "تمت الزيارة") {
+                    finalNote = "زيارة مكتملة";
+                }
+                
+                // دمج الملاحظات المكتوبة يدوياً مع الحالة التلقائية
+                let displayNote = finalNote;
+                if(item.description || item.note) {
+                    displayNote += " - " + (item.description || item.note);
+                }
+
                 tbody.innerHTML += `<tr>
                     <td>${item.date}</td>
                     <td><b>${item.clientName}</b></td>
@@ -368,7 +387,7 @@
                     <td><span class="badge ${sClass}">${item.status}</span></td>
                     <td>${item.location ? `<a href="https://www.google.com/maps?q=${item.location}" target="_blank">📍 عرض</a>` : '-'}</td>
                     <td>${item.billPhoto ? `<a href="${item.billPhoto}" target="_blank">🖼️ صورة</a>` : '-'}</td>
-                    <td>${item.description || item.note || '-'}</td>
+                    <td style="white-space: normal;">${displayNote || '-'}</td>
                 </tr>`;
             });
 
