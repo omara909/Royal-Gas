@@ -105,6 +105,21 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
+        // --- وظيفة فحص الدخول المسبق ---
+        function checkAutoLogin() {
+            const isAdmin = localStorage.getItem("adminLoggedIn");
+            const isTech = localStorage.getItem("techLoggedIn");
+
+            if (isAdmin === "true") {
+                window.location.href = "admin.html";
+                return true;
+            } else if (isTech === "true") {
+                window.location.href = "technician.html";
+                return true;
+            }
+            return false;
+        }
+
         document.getElementById('loginBtn').addEventListener('click', async () => {
             const email = document.getElementById('email').value.trim().toLowerCase();
             const password = document.getElementById('password').value;
@@ -119,9 +134,8 @@
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 
                 if (email === "admin@royalgas.com") {
-                    // --- إضافة نظام الأمان (بصمة الدخول للأدمن) ---
+                    // حفظ حالة دخول المدير
                     localStorage.setItem("adminLoggedIn", "true");
-                    // ------------------------------------------
                     
                     document.getElementById('authScreen').style.opacity = '0';
                     
@@ -137,7 +151,7 @@
                     }, 500);
 
                 } else {
-                    // لو فني ممكن نضيف له برضه بصمة أمان خاصة به لو حابب تحمي صفحته
+                    // حفظ حالة دخول الفني
                     localStorage.setItem("techLoggedIn", "true"); 
                     window.location.href = "technician.html";
                 }
@@ -151,6 +165,9 @@
         });
 
         window.onload = () => {
+            // أول ما الصفحة تحمل، بنشوف لو مسجل دخول أصلاً بنوديه صفحته فوراً
+            if (checkAutoLogin()) return;
+
             setTimeout(() => {
                 document.getElementById('splash').style.opacity = '0';
                 setTimeout(() => {
