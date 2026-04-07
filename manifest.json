@@ -4,6 +4,7 @@
   "description": "تطبيق الفنيين لشركة رويال جاز - إدارة الطلبات والصيانة",
   "start_url": "index.html",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#0b4a99",
   "icons": [
