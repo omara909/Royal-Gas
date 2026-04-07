@@ -7,7 +7,7 @@
   "theme_color": "#0b4a99",
   "icons": [
     {
-      "src": "icon.png",
+      "src": "image/jpeg",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
