@@ -1,0 +1,15 @@
+{
+  "name": "Royal Gas Tech",
+  "short_name": "RoyalGas",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0b4a99",
+  "theme_color": "#0b4a99",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/944/944948.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
