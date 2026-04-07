@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Royal Gas - Control Panel</title>
+    <script>
+        if (localStorage.getItem("adminLoggedIn") !== "true") {
+            window.location.replace("index.html");
+        }
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
@@ -364,7 +369,6 @@
             filtered.forEach(item => {
                 const sClass = item.status==='معلق'?'bg-pending':(item.status==='تمت الزيارة'?'bg-done':'bg-delay');
                 
-                // منطق الملاحظات الجديد
                 let finalNote = "";
                 if(item.status === "ملغاة") {
                     finalNote = "تم الإلغاء من الفني";
@@ -374,7 +378,6 @@
                     finalNote = "زيارة مكتملة";
                 }
                 
-                // دمج الملاحظات المكتوبة يدوياً مع الحالة التلقائية
                 let displayNote = finalNote;
                 if(item.description || item.note) {
                     displayNote += " - " + (item.description || item.note);
@@ -442,7 +445,15 @@
             XLSX.writeFile(wb, "Royal_Gas_Report.xlsx");
         };
 
-        window.logout = () => { if(confirm("هل تريد تسجيل الخروج؟")) window.location.replace("index.html"); };
+        // --- وظيفة تسجيل الخروج المعدلة والمضمونة ---
+        window.logout = () => { 
+            if(confirm("هل تريد تسجيل الخروج؟")) {
+                // 1. مسح المفتاح من الذاكرة
+                localStorage.removeItem("adminLoggedIn");
+                // 2. التحويل لصفحة الدخول مع أمر مسح إجباري في الرابط
+                window.location.replace("index.html?logout=true");
+            }
+        };
         
         document.getElementById('cDate').valueAsDate = new Date();
     </script>
