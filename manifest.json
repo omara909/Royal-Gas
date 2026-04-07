@@ -1,6 +1,7 @@
 {
   "name": "Royal Gas Tech",
   "short_name": "RoyalGas",
+  "description": "تطبيق الفنيين لشركة رويال جاز - إدارة الطلبات والصيانة",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#ffffff",
