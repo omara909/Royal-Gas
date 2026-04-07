@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Royal Gas - Live System</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0b4a99">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@700;900&display=swap');
         :root { --r-blue: #0b4a99; --r-red: #ce2029; --r-lightblue: #add8e6; }
@@ -105,16 +107,23 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // --- وظيفة فحص الدخول المسبق ---
+        // --- وظيفة فحص الدخول المسبق المعدلة ---
         function checkAutoLogin() {
+            // لو الرابط فيه logout امسح الذاكرة فوراً
+            if (window.location.search.includes('logout')) {
+                localStorage.removeItem("adminLoggedIn");
+                localStorage.removeItem("techLoggedIn");
+                return false;
+            }
+
             const isAdmin = localStorage.getItem("adminLoggedIn");
             const isTech = localStorage.getItem("techLoggedIn");
 
             if (isAdmin === "true") {
-                window.location.href = "admin.html";
+                window.location.replace("admin.html");
                 return true;
             } else if (isTech === "true") {
-                window.location.href = "technician.html";
+                window.location.replace("technician.html");
                 return true;
             }
             return false;
@@ -134,9 +143,7 @@
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 
                 if (email === "admin@royalgas.com") {
-                    // حفظ حالة دخول المدير
                     localStorage.setItem("adminLoggedIn", "true");
-                    
                     document.getElementById('authScreen').style.opacity = '0';
                     
                     setTimeout(() => {
@@ -146,28 +153,28 @@
                         setTimeout(() => welcome.style.opacity = '1', 50);
                         
                         setTimeout(() => {
-                            window.location.href = "admin.html";
-                        }, 2500);
+                            window.location.replace("admin.html");
+                        }, 2000);
                     }, 500);
 
                 } else {
-                    // حفظ حالة دخول الفني
                     localStorage.setItem("techLoggedIn", "true"); 
-                    window.location.href = "technician.html";
+                    window.location.replace("technician.html");
                 }
 
             } catch (error) {
                 console.error(error);
                 btn.innerText = "دخول النظام";
                 btn.disabled = false;
-                alert("فشل الدخول: تأكد من الإيميل والباسورد");
+                alert("فشل الدخول: تأكد من الحساب");
             }
         });
 
         window.onload = () => {
-            // أول ما الصفحة تحمل، بنشوف لو مسجل دخول أصلاً بنوديه صفحته فوراً
+            // تنفيذ الفحص فوراً
             if (checkAutoLogin()) return;
 
+            // إذا لم يوجد دخول مسبق، اعرض الافتتاحية
             setTimeout(() => {
                 document.getElementById('splash').style.opacity = '0';
                 setTimeout(() => {
