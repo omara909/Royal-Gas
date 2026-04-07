@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Royal Gas - Control Panel</title>
     <script>
+        // كود حماية الصفحة - يطرد أي شخص لم يسجل الدخول
         if (localStorage.getItem("adminLoggedIn") !== "true") {
             window.location.replace("index.html");
         }
@@ -110,7 +111,6 @@
     </div>
 
     <div class="main-content">
-        
         <div id="statsSection">
             <div class="page-header">
                 <h1>مراقبة الأداء اليومي</h1>
@@ -273,6 +273,7 @@
         let allTasks = [];
         let techMap = {};
 
+        // تنقل بين الأقسام
         window.showSection = (name) => {
             ['statsSection', 'addTaskSection', 'addTechSection', 'analysisSection'].forEach(id => {
                 document.getElementById(id).style.display = id.startsWith(name) ? 'block' : 'none';
@@ -281,6 +282,7 @@
             document.getElementById('l-' + name).classList.add('active');
         };
 
+        // إدارة الفنيين
         onSnapshot(collection(db, "technicians"), (snap) => {
             const sel = document.getElementById('techSelect');
             const fTech = document.getElementById('fTech');
@@ -299,6 +301,7 @@
             });
         });
 
+        // متابعة المهام
         onSnapshot(collection(db, "tasks"), (snap) => {
             allTasks = [];
             snap.forEach(d => { const t = d.data(); t.id = d.id; allTasks.push(t); });
@@ -306,6 +309,7 @@
             runAnalysis();
         });
 
+        // تحديث الجدول الرئيسي
         window.updateTaskTable = () => {
             const search = document.getElementById('mainSearchInput').value.toLowerCase();
             const tbody = document.getElementById('taskTableBody');
@@ -350,6 +354,7 @@
             document.getElementById('todayTotal').innerText = tt;
         };
 
+        // التحليلات
         window.runAnalysis = () => {
             const m = document.getElementById('fMonth').value;
             const d = document.getElementById('fDay').value;
@@ -368,20 +373,7 @@
 
             filtered.forEach(item => {
                 const sClass = item.status==='معلق'?'bg-pending':(item.status==='تمت الزيارة'?'bg-done':'bg-delay');
-                
-                let finalNote = "";
-                if(item.status === "ملغاة") {
-                    finalNote = "تم الإلغاء من الفني";
-                } else if(item.status === "مؤجلة") {
-                    finalNote = `تاريخ التأجيل: ${item.date}`;
-                } else if(item.status === "تمت الزيارة") {
-                    finalNote = "زيارة مكتملة";
-                }
-                
-                let displayNote = finalNote;
-                if(item.description || item.note) {
-                    displayNote += " - " + (item.description || item.note);
-                }
+                let displayNote = (item.description || item.note || "");
 
                 tbody.innerHTML += `<tr>
                     <td>${item.date}</td>
@@ -396,13 +388,9 @@
 
             document.getElementById('analysisTotalCount').innerText = filtered.length;
             let doneCount = filtered.filter(x => x.status === "تمت الزيارة").length;
-            let delayedCount = filtered.filter(x => x.status === "مؤجلة").length;
-            let cancelledCount = filtered.filter(x => x.status === "ملغاة").length;
-
             document.getElementById('analysisDoneCount').innerText = doneCount;
-            document.getElementById('analysisDelayedCount').innerText = delayedCount;
-            document.getElementById('analysisCancelledCount').innerText = cancelledCount;
-
+            document.getElementById('analysisDelayedCount').innerText = filtered.filter(x => x.status === "مؤجلة").length;
+            document.getElementById('analysisCancelledCount').innerText = filtered.filter(x => x.status === "ملغاة").length;
             let rate = filtered.length > 0 ? Math.round((doneCount / filtered.length) * 100) : 0;
             document.getElementById('analysisSuccessRate').innerText = rate + "%";
         };
@@ -421,7 +409,6 @@
             if(!data.clientName || !data.techEmail) return alert("برجاء إدخال اسم العميل والفني");
             await addDoc(collection(db, "tasks"), data);
             alert("تم إرسال التكليف بنجاح ✅");
-            
             document.getElementById('cName').value=''; document.getElementById('cPhone').value='';
             document.getElementById('cAddress').value=''; document.getElementById('cNote').value='';
             showSection('stats');
@@ -445,13 +432,14 @@
             XLSX.writeFile(wb, "Royal_Gas_Report.xlsx");
         };
 
-        // --- وظيفة تسجيل الخروج المعدلة والمضمونة ---
+        // --- وظيفة تسجيل الخروج المضمونة والنهائية ---
         window.logout = () => { 
             if(confirm("هل تريد تسجيل الخروج؟")) {
-                // 1. مسح المفتاح من الذاكرة
-                localStorage.removeItem("adminLoggedIn");
-                // 2. التحويل لصفحة الدخول مع أمر مسح إجباري في الرابط
-                window.location.replace("index.html?logout=true");
+                // 1. مسح الذاكرة بالكامل لضمان عدم بقاء أي بيانات
+                localStorage.clear(); 
+                
+                // 2. التحويل لصفحة الدخول فوراً
+                window.location.href = "index.html";
             }
         };
         
